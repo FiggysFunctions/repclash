@@ -222,18 +222,28 @@ create or replace view app.v_day_scored as
          (d.raw_effort >= r.qualify_threshold) as qualified
   from app.v_day_raw d cross join app.rules() r;
 
--- Consecutive-qualifying-day streak length, per day
+-- Consecutive-qualifying-day streak length, per day.
+--
+-- The classic gaps-and-islands trick: for qualifying days only, subtracting a
+-- row number from the date gives every run of consecutive days the same value,
+-- so we can number within each run. Non-qualifying days are joined back on
+-- afterwards with a streak of zero — they still earned their effort points and
+-- must not vanish from the totals.
 create or replace view app.v_day_streak as
-  select s.*,
-         case when s.qualified
-              then row_number() over (partition by s.user_id, s.grp order by s.day)
-              else 0 end::int as streak_day
-  from (
-    select v.*,
+  with runs as (
+    select v.user_id, v.day,
            v.day - (row_number() over (partition by v.user_id order by v.day))::int as grp
     from app.v_day_scored v
     where v.qualified
-  ) s;
+  ),
+  numbered as (
+    select user_id, day,
+           (row_number() over (partition by user_id, grp order by day))::int as streak_day
+    from runs
+  )
+  select v.*, coalesce(n.streak_day, 0) as streak_day
+  from app.v_day_scored v
+  left join numbered n on n.user_id = v.user_id and n.day = v.day;
 
 -- Final per-day total
 create or replace view app.v_day_total as
@@ -365,10 +375,13 @@ language plpgsql volatile security definer set search_path = public, app as $$
 declare code text; i int := 0;
 begin
   loop
-    -- No I/O/0/1 — these are read aloud and typed by humans.
-    code := string_agg(substr('ABCDEFGHJKLMNPQRSTUVWXYZ23456789',
-                              1 + floor(random() * 32)::int, 1), '')
-            from generate_series(1, 6);
+    -- No I/O/0/1 — these get read aloud and typed by humans.
+    -- Written as SELECT INTO rather than a plain assignment: since PG14,
+    -- assignment expressions can't have a FROM clause.
+    select string_agg(substr('ABCDEFGHJKLMNPQRSTUVWXYZ23456789',
+                             1 + floor(random() * 32)::int, 1), '')
+      into code
+      from generate_series(1, 6);
     exit when not exists (select 1 from public.crews where join_code = code);
     i := i + 1;
     if i > 50 then raise exception 'Could not allocate a join code'; end if;
@@ -439,10 +452,12 @@ begin
       coalesce((select sum(y.week_bonus)   from w y where y.user_id = m.uid), 0)::int as wk_bonus,
       coalesce((select sum(x.sessions)     from d x where x.user_id = m.uid), 0)::int as sess,
       coalesce((select count(*)            from d x where x.user_id = m.uid and x.qualified), 0)::int as adays,
+      -- A streak is live if it reaches today or yesterday. max() rather than
+      -- "most recent row" so a token 20-point session today doesn't read as a
+      -- broken streak while yesterday's real one still stands.
       coalesce((
-        select x.streak_day from app.v_day_total x
+        select max(x.streak_day) from app.v_day_total x
         where x.user_id = m.uid and x.day >= current_date - 1
-        order by x.day desc limit 1
       ), 0)::int as streak,
       coalesce((select count(*) from public.titles t
                 where t.user_id = m.uid and t.crew_id = p_crew), 0)::int as tcount
@@ -530,9 +545,8 @@ begin
     'total_sessions', coalesce((select sum(sessions) from app.v_day_total where user_id = p_user), 0),
     'active_days',    coalesce((select count(*) from app.v_day_total where user_id = p_user and qualified), 0),
     'best_streak',    coalesce((select max(streak_day) from app.v_day_total where user_id = p_user), 0),
-    'current_streak', coalesce((select streak_day from app.v_day_total
-                                where user_id = p_user and day >= current_date - 1
-                                order by day desc limit 1), 0),
+    'current_streak', coalesce((select max(streak_day) from app.v_day_total
+                                where user_id = p_user and day >= current_date - 1), 0),
     'total_km',       coalesce((select sum(distance_km) from app.v_day_total where user_id = p_user), 0),
     'total_minutes',  coalesce((select sum(minutes) from app.v_day_total where user_id = p_user), 0),
     'first_day',      (select min(day) from app.v_day_total where user_id = p_user),

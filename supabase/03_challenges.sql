@@ -70,7 +70,13 @@ declare n int; idx int; t public.challenge_templates;
 begin
   select count(*) into n from public.challenge_templates where active;
   if n = 0 then raise exception 'No active challenge templates'; end if;
-  idx := ((p_week - date '2024-01-01') / 7 + abs(hashtext(p_crew::text)) % n)::int % n;
+
+  -- hashtext() can return the most negative int32, where abs() would overflow,
+  -- so widen to bigint first. The double modulo keeps the result non-negative
+  -- regardless — a negative OFFSET is an error.
+  idx := (((p_week - date '2024-01-01') / 7
+           + abs(hashtext(p_crew::text)::bigint)) % n + n) % n;
+
   select * into t from public.challenge_templates
    where active order by rotation offset idx limit 1;
   return t;

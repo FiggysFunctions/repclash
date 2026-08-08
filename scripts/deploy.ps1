@@ -52,7 +52,8 @@ git push origin $branch
 Write-Host ""
 Write-Host "Pushed to $branch." -ForegroundColor Green
 
-$remote = (git remote get-url origin) 2>$null
+$remote = $null
+try { $remote = (git remote get-url origin) } catch { }
 if ($remote) {
   $slug = $remote -replace '^.*github\.com[:/]', '' -replace '\.git$', ''
   Write-Host "Build progress: https://github.com/$slug/actions"

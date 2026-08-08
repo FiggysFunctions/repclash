@@ -14,14 +14,16 @@ import { hasUnread, markRead, primeIfFirstRun } from './changelog.js';
 import { openWhatsNew } from './views/whatsnew.js';
 import { renderSetup, renderAuth, renderProfileSetup, renderCrewSetup } from './views/onboarding.js';
 import * as leaderboardView from './views/leaderboard.js';
+import * as feedView from './views/feed.js';
 import * as logView from './views/log.js';
 import * as challengesView from './views/challenges.js';
 import * as profileView from './views/profile.js';
 
 const TABS = [
   { id: 'board',      icon: '🏆', label: 'Board',   view: leaderboardView },
-  { id: 'challenges', icon: '🎯', label: 'Weekly',  view: challengesView },
+  { id: 'feed',       icon: '👀', label: 'Feed',    view: feedView },
   { id: 'log',        icon: '＋', label: 'Log',     view: logView, primary: true },
+  { id: 'challenges', icon: '🎯', label: 'Weekly',  view: challengesView },
   { id: 'me',         icon: '👤', label: 'Me',      view: profileView }
 ];
 

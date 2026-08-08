@@ -218,6 +218,17 @@ function settingsSheet(ctx) {
     <p class="sub">${demo
       ? 'Demo mode — everything here is fake and lives only on this device.'
       : `Signed in as ${esc(api.currentUser()?.email || '')}`}</p>
+    <div class="privacy-row" style="margin-bottom:12px">
+      <div>
+        <div class="privacy-t">Show my workouts to the crew</div>
+        <div class="privacy-s">Sets the default for new sessions. You can still
+          flip any individual one.</div>
+      </div>
+      <button class="switch ${ctx.profile.default_private ? '' : 'on'}" data-defpriv
+              role="switch" aria-checked="${!ctx.profile.default_private}"
+              aria-label="Show my workouts to the crew"><span></span></button>
+    </div>
+
     <button class="btn" data-edit>Change name or avatar</button>
     ${demo ? '' : '<button class="btn mt" data-crews>Switch or join a crew</button>'}
     <button class="btn mt" data-install>How to install this app</button>
@@ -245,6 +256,23 @@ function settingsSheet(ctx) {
     api.endDemo();
     api.startDemo();
     location.reload();
+  });
+
+  $('[data-defpriv]', s.el).addEventListener('click', async () => {
+    const btn = $('[data-defpriv]', s.el);
+    const nextPrivate = !ctx.profile.default_private;
+    btn.disabled = true;
+    try {
+      const updated = await api.updateProfile({ default_private: nextPrivate });
+      Object.assign(ctx.profile, updated);
+      btn.classList.toggle('on', !nextPrivate);
+      btn.setAttribute('aria-checked', String(!nextPrivate));
+      toastOk(nextPrivate ? 'New sessions will be private' : 'New sessions will be visible');
+    } catch (e) {
+      toastBad(e.message);
+    } finally {
+      btn.disabled = false;
+    }
   });
 
   $('[data-edit]', s.el).addEventListener('click', () => { s.close(); editSheet(ctx); });

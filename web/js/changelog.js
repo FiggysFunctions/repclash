@@ -11,6 +11,21 @@
 
 export const CHANGELOG = [
   {
+    version: '1.2.0',
+    date: '2026-08-08',
+    title: 'The Feed',
+    blurb: 'See exactly what everyone else is doing. Or don\'t let them see yours.',
+    items: [
+      ['new',  'New 👀 Feed tab. Every session the crew logs, with the actual numbers — sets, reps, weight, distance, time. No more wondering what Jax is squatting.'],
+      ['new',  'Tap any session in the feed to see the whole thing broken down exercise by exercise.'],
+      ['new',  'Tap someone else\'s session and choose "Only show <name>" to scroll through just their training.'],
+      ['new',  'Private sessions. Flip the switch when you save, or on any session afterwards, and the detail is hidden from everyone else.'],
+      ['new',  'Me → ⚙️ has a master switch if you\'d rather everything you log be private by default.'],
+      ['note', 'Private workouts still score. They count for your points, your streak, the leaderboard and the weekly challenge exactly as before — the switch only hides what you did, not that you did it.'],
+      ['better', 'The Weekly tab moved along one to make room. Log is still the big button in the middle.']
+    ]
+  },
+  {
     version: '1.1.0',
     date: '2026-08-08',
     title: 'Say what you think',

@@ -290,13 +290,18 @@ export async function exercises() {
    ------------------------------------------------------------------------- */
 
 /** Save a whole session: one workout row plus its entries. */
-export async function saveWorkout({ performedOn, note, entries }) {
-  if (demo.on()) return demo.saveWorkout({ performedOn, note, entries });
+export async function saveWorkout({ performedOn, note, entries, isPrivate }) {
+  if (demo.on()) return demo.saveWorkout({ performedOn, note, entries, isPrivate });
   const uid = currentUser()?.id;
   const rows = await rest('/workouts', {
     method: 'POST',
     headers: { Prefer: 'return=representation' },
-    body: { user_id: uid, performed_on: performedOn, note: note || null }
+    body: {
+      user_id: uid,
+      performed_on: performedOn,
+      note: note || null,
+      is_private: !!isPrivate
+    }
   });
   const workout = rows[0];
 
@@ -330,6 +335,18 @@ export const myWorkouts = (limit = 40) =>
 
 export const deleteWorkout = (id) =>
   demo.on() ? demo.deleteWorkout(id) : rest(`/workouts?id=eq.${id}`, { method: 'DELETE' });
+
+export const setWorkoutPrivacy = (id, isPrivate) =>
+  demo.on() ? demo.setWorkoutPrivacy(id, isPrivate)
+            : rest(`/workouts?id=eq.${id}`, { method: 'PATCH', body: { is_private: isPrivate } });
+
+/** The crew's workout feed. `before` is the created_at of the oldest row you
+    already have — that's how you page backwards. */
+export const crewFeed = (crewId, { limit = 25, before = null, userId = null } = {}) =>
+  demo.on() ? demo.crewFeed({ limit, before, userId })
+            : rpc('crew_feed', {
+                p_crew: crewId, p_limit: limit, p_before: before, p_user: userId
+              });
 
 export const memberStats = (userId) =>
   demo.on() ? demo.memberStats(userId) : rpc('member_stats', { p_user: userId });

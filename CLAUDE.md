@@ -46,6 +46,17 @@ streak, and weekly-target bonuses, so showing up four times a week beats one
 enormous session. That's a product decision Liam made, not an accident. Don't
 "optimise" it toward raw volume without asking.
 
+## Privacy
+
+`workouts.is_private` hides a session's *detail* from the feed. It deliberately
+does **not** affect scoring: the scoring views and every RPC run SECURITY
+DEFINER as the table owner, so private sessions still feed the leaderboard,
+streaks and challenge standings. Liam confirmed this is what he wants — a
+session that stopped counting when hidden would read as a bug. Don't "fix" it.
+
+`profiles.default_private` is only the default applied to new drafts; each
+workout carries its own flag.
+
 ## Security model
 
 Row-level security on every table. Two `SECURITY DEFINER` helpers,

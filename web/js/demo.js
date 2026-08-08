@@ -130,6 +130,15 @@ function load() {
 }
 function save() { localStorage.setItem(KEY, JSON.stringify(state)); }
 
+const NOTES = [
+  'Felt strong today.',
+  'Legs are gone.',
+  'Rough one. Turned up anyway.',
+  'New PB 💪',
+  'Rain the whole way round.',
+  'Short session, better than nothing.'
+];
+
 /** 56 days of plausible training history for everyone but you. */
 function generate() {
   const workouts = [];
@@ -153,11 +162,16 @@ function generate() {
         const v = shapeEntry(ex, rand, person.size);
         entries.push({ ...v, exercise_id: ex.id, effort_points: effort(ex, v) });
       }
+      // A plausible time of day so the feed orders sensibly, and the odd
+      // private session so the padlock is visible in the demo.
+      const hour = 6 + Math.floor(rand() * 15);
       workouts.push({
         id: `demo-w${++wid}`,
         user_id: person.id,
         performed_on: day,
-        note: null,
+        created_at: `${day}T${String(hour).padStart(2, '0')}:${rand() < .5 ? '15' : '45'}:00.000Z`,
+        note: rand() < 0.12 ? NOTES[Math.floor(rand() * NOTES.length)] : null,
+        is_private: rand() < 0.08,
         entries
       });
     }
@@ -413,13 +427,14 @@ export async function challengeStandings(id) {
   }).sort((a, b) => b.score - a.score);
 }
 
-export async function saveWorkout({ performedOn, note, entries }) {
+export async function saveWorkout({ performedOn, note, entries, isPrivate }) {
   const s = load();
   const w = {
     id: `demo-w${s.nextId++}`,
     user_id: 'demo-me',
     performed_on: performedOn,
     note: note || null,
+    is_private: !!isPrivate,
     entries: entries.map(e => {
       const ex = EXERCISES.find(x => x.id === e.exerciseId);
       const v = {
@@ -454,6 +469,47 @@ export async function deleteWorkout(id) {
   const s = load();
   s.workouts = s.workouts.filter(w => w.id !== id);
   save();
+}
+
+export async function setWorkoutPrivacy(id, isPrivate) {
+  const s = load();
+  const w = s.workouts.find(x => x.id === id);
+  if (w) w.is_private = !!isPrivate;
+  save();
+}
+
+export async function crewFeed({ limit = 25, before = null, userId = null } = {}) {
+  return load().workouts
+    .filter(w => !w.is_private || w.user_id === 'demo-me')
+    .filter(w => !userId || w.user_id === userId)
+    .map(w => ({ ...w, created_at: w.created_at || `${w.performed_on}T18:00:00.000Z` }))
+    .filter(w => !before || w.created_at < before)
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+    .slice(0, limit)
+    .map(w => {
+      const p = CAST.find(c => c.id === w.user_id);
+      return {
+        workout_id: w.id,
+        user_id: w.user_id,
+        display_name: p.display_name,
+        avatar_emoji: p.avatar_emoji,
+        performed_on: w.performed_on,
+        note: w.note,
+        created_at: w.created_at,
+        effort: w.entries.reduce((s, e) => s + e.effort_points, 0),
+        is_mine: w.user_id === 'demo-me',
+        is_private: !!w.is_private,
+        entries: w.entries.map(e => {
+          const ex = EXERCISES.find(x => x.id === e.exercise_id);
+          return {
+            name: ex.name, emoji: ex.emoji, kind: ex.kind, category: ex.category,
+            sets: e.sets, reps: e.reps, weight_kg: e.weight_kg,
+            distance_km: e.distance_km, duration_min: e.duration_min,
+            points: e.effort_points
+          };
+        })
+      };
+    });
 }
 
 export async function seasonChampions() { return []; }

@@ -456,6 +456,70 @@ a { color: var(--ice); }
 }
 .tab-log.on .tab-i { filter: brightness(1.1); }
 
+/* ---------- Feed -------------------------------------------------------- */
+.post {
+  background: var(--bg-card); border: 1px solid var(--line-soft);
+  border-radius: var(--r); padding: 14px; margin-bottom: 10px;
+  transition: transform .12s, border-color .15s;
+}
+.post:active { transform: scale(.99); border-color: var(--line); }
+.post-mine { border-color: rgba(255,107,44,.32); }
+
+.post-head { display: flex; align-items: center; gap: 11px; }
+.post-note {
+  margin: 11px 0 0; padding: 9px 12px;
+  background: var(--bg-input); border-radius: 10px;
+  font-size: .86rem; color: var(--text-dim); font-style: italic;
+}
+
+.post-lines {
+  margin-top: 11px; padding-top: 11px;
+  border-top: 1px solid var(--line-soft);
+  display: grid; gap: 6px;
+}
+.post-line {
+  display: grid; grid-template-columns: auto 1fr auto; gap: 9px;
+  align-items: baseline; font-size: .87rem;
+}
+.post-em { font-size: .95rem; }
+.post-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.post-detail {
+  color: var(--text-dim); font-variant-numeric: tabular-nums;
+  font-weight: 650; white-space: nowrap;
+}
+.post-more { font-size: .78rem; color: var(--text-faint); padding-left: 26px; }
+
+.lock {
+  display: inline-block; margin-left: 6px; padding: 1px 7px;
+  border-radius: 999px; font-size: .64rem; font-weight: 800;
+  background: rgba(151,160,181,.16); color: var(--text-dim); vertical-align: 1px;
+}
+
+/* ---------- Privacy switch ---------------------------------------------- */
+.privacy-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  padding: 13px 14px; margin-bottom: 12px;
+  background: var(--bg-card); border: 1px solid var(--line-soft);
+  border-radius: var(--r);
+}
+.privacy-t { font-size: .91rem; font-weight: 720; }
+.privacy-s { font-size: .77rem; color: var(--text-faint); margin-top: 2px; line-height: 1.4; }
+
+.switch {
+  flex: none; width: 50px; height: 30px; padding: 3px;
+  border-radius: 999px; background: var(--bg-input);
+  border: 1px solid var(--line);
+  transition: background .2s, border-color .2s;
+}
+.switch span {
+  display: block; width: 22px; height: 22px; border-radius: 50%;
+  background: var(--text-faint);
+  transition: transform .2s cubic-bezier(.3,.8,.3,1), background .2s;
+}
+.switch.on { background: rgba(198,242,78,.22); border-color: var(--volt); }
+.switch.on span { transform: translateX(20px); background: var(--volt); }
+.switch:disabled { opacity: .5; }
+
 /* ---------- What's new -------------------------------------------------- */
 
 /* Unread dot on the ✨ header button */

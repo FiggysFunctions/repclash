@@ -46,8 +46,9 @@ You need two free accounts. Neither ever asks for a card.
 3. Do the same with `supabase/02_exercises.sql`.
 4. Do the same with `supabase/03_challenges.sql`.
 5. Do the same with `supabase/04_feedback.sql`.
+6. Do the same with `supabase/05_feed_privacy.sql`.
 
-Order matters — run them 01, 02, 03, 04.
+Order matters — run them in number order.
 
 ### Step 3 — Turn off email confirmation
 
@@ -148,6 +149,24 @@ Seasons run 90 days. When one ends, the leader is crowned champion, gets a
 To change the challenges, edit the `challenge_templates` rows in
 `supabase/03_challenges.sql` and re-run it. Adding a row lengthens the rotation.
 
+## The feed and privacy
+
+The **👀 Feed** tab shows every session the crew logs, with the real numbers —
+sets, reps, weight, distance, time. Tap one for the full breakdown, or tap
+someone else's and choose *Only show them* to scroll through just their
+training.
+
+Any session can be made **private**: flip the switch when you save it, or on
+any past session from the feed or your recent list. A private session is
+invisible to everyone else — you'll see it with a 🔒 so you know. There's a
+master switch under **Me → ⚙️** if you'd rather everything be private by
+default.
+
+**Private sessions still score.** They count towards your points, streak,
+leaderboard position and the weekly challenge exactly as before. The switch
+hides *what* you did, not *that* you did it. If you wanted a session not to
+count at all, you'd delete it.
+
 ## The suggestion box
 
 Everyone in the crew gets **Me → 💡 Suggest something**. Whatever they send
@@ -208,6 +227,7 @@ supabase/
   02_exercises.sql    the exercise catalog and what each is worth
   03_challenges.sql   weekly challenge rotation, titles, season rollover
   04_feedback.sql     the suggestion box
+  05_feed_privacy.sql the workout feed and per-session privacy
 web/
   index.html          the shell
   css/app.css         all the styling

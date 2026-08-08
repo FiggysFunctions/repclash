@@ -19,7 +19,7 @@ const draft = {
       const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
       if (d && Array.isArray(d.entries)) return d;
     } catch { /* corrupt draft — start fresh */ }
-    return { date: todayISO(), note: '', entries: [] };
+    return { date: todayISO(), note: '', entries: [], isPrivate: false };
   },
   write(d) { localStorage.setItem(DRAFT_KEY, JSON.stringify(d)); },
   clear()  { localStorage.removeItem(DRAFT_KEY); }
@@ -31,8 +31,11 @@ let catalog = [];  // exercise list
 export async function render(root, ctx) {
   d = draft.read();
   // A draft left over from a previous day still belongs to that day, but if
-  // it's empty just move it to today.
-  if (!d.entries.length && d.date !== todayISO()) d.date = todayISO();
+  // it's empty just move it to today and re-apply the privacy preference.
+  if (!d.entries.length) {
+    if (d.date !== todayISO()) d.date = todayISO();
+    d.isPrivate = !!ctx.profile.default_private;
+  }
 
   root.innerHTML = `
     <div class="view">
@@ -113,6 +116,19 @@ function drawBody(root, ctx) {
         <input class="input" id="note" maxlength="280"
                placeholder="Felt strong. Legs are gone." value="${esc(d.note)}">
       </div>
+
+      <div class="privacy-row">
+        <div>
+          <div class="privacy-t">${d.isPrivate ? '🔒 Keep this private' : '👀 Show the crew'}</div>
+          <div class="privacy-s">${d.isPrivate
+            ? 'Hidden from the feed. Still scores exactly the same.'
+            : 'Your exercises, reps and weights appear in the feed.'}</div>
+        </div>
+        <button class="switch ${d.isPrivate ? '' : 'on'}" id="priv"
+                role="switch" aria-checked="${!d.isPrivate}"
+                aria-label="Show this session to the crew"><span></span></button>
+      </div>
+
       <button class="btn btn-primary" id="save">Save session · ${num(capped)} pts</button>
       <button class="btn btn-ghost mt" id="discard">Discard</button>
     ` : ''}
@@ -132,6 +148,12 @@ function drawBody(root, ctx) {
   $('#note', root)?.addEventListener('input', e => {
     d.note = e.target.value;
     draft.write(d);
+  });
+
+  $('#priv', root)?.addEventListener('click', () => {
+    d.isPrivate = !d.isPrivate;
+    draft.write(d);
+    drawBody(root, ctx);
   });
 
   $('#save', root)?.addEventListener('click', () => saveSession(root, ctx));
@@ -346,7 +368,8 @@ async function saveSession(root, ctx) {
     await api.saveWorkout({
       performedOn: d.date,
       note: d.note,
-      entries: d.entries
+      entries: d.entries,
+      isPrivate: d.isPrivate
     });
     draft.clear();
     d = draft.read();
@@ -377,7 +400,9 @@ async function loadRecent(root, ctx) {
         <div class="row" data-w="${esc(w.id)}">
           <div class="row-av">${esc(w.workout_entries[0]?.exercises?.emoji || '🏋️')}</div>
           <div class="row-main">
-            <div class="row-name">${relDay(w.performed_on)}</div>
+            <div class="row-name">${relDay(w.performed_on)}
+              ${w.is_private ? '<span class="lock">🔒</span>' : ''}
+            </div>
             <div class="row-sub">${esc(names.slice(0, 3).join(', '))}${names.length > 3 ? ` +${names.length - 3}` : ''}</div>
           </div>
           <div class="row-pts">${num(pts)}<span>effort</span></div>
@@ -408,8 +433,37 @@ function workoutSheet(w, root, ctx) {
         </div>
         <div class="draft-pts">${num(e.effort_points)}</div>
       </div>`).join('')}
+
+    <div class="privacy-row mt">
+      <div>
+        <div class="privacy-t">${w.is_private ? '🔒 Private' : '👀 Visible to the crew'}</div>
+        <div class="privacy-s">${w.is_private
+          ? 'Hidden from the feed. Still scores the same.'
+          : 'Everyone in the crew can see this in the feed.'}</div>
+      </div>
+      <button class="switch ${w.is_private ? '' : 'on'}" data-priv
+              role="switch" aria-checked="${!w.is_private}"
+              aria-label="Visible to the crew"><span></span></button>
+    </div>
+
     <button class="btn btn-danger mt" data-del>Delete this session</button>
   `);
+
+  $('[data-priv]', s.el).addEventListener('click', async () => {
+    const btn = $('[data-priv]', s.el);
+    const next = !w.is_private;
+    btn.disabled = true;
+    try {
+      await api.setWorkoutPrivacy(w.id, next);
+      w.is_private = next;
+      s.close();
+      toastOk(next ? 'Hidden from the crew' : 'Visible to the crew');
+      loadRecent(root, ctx);
+    } catch (e) {
+      toastBad(e.message);
+      btn.disabled = false;
+    }
+  });
 
   $('[data-del]', s.el).addEventListener('click', async () => {
     const ok = await confirmSheet({

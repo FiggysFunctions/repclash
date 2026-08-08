@@ -45,8 +45,9 @@ You need two free accounts. Neither ever asks for a card.
    it in, and click **Run**. It should say *Success*.
 3. Do the same with `supabase/02_exercises.sql`.
 4. Do the same with `supabase/03_challenges.sql`.
+5. Do the same with `supabase/04_feedback.sql`.
 
-Order matters — run them 01, 02, 03.
+Order matters — run them 01, 02, 03, 04.
 
 ### Step 3 — Turn off email confirmation
 
@@ -147,6 +148,30 @@ Seasons run 90 days. When one ends, the leader is crowned champion, gets a
 To change the challenges, edit the `challenge_templates` rows in
 `supabase/03_challenges.sql` and re-run it. Adding a row lengthens the rotation.
 
+## The suggestion box
+
+Everyone in the crew gets **Me → 💡 Suggest something**. Whatever they send
+lands in an inbox that only **the crew owner** can read — that's you, for the
+crew you created. You'll see an unread count on your Me tab.
+
+For each suggestion you can mark it **Planned**, **Done** or **Not doing**, and
+leave a reply. The person who sent it sees the status and your reply under
+**Me → 📄 What I've suggested**, so nothing disappears into a void.
+
+There's no email notification, deliberately: Supabase's free tier only sends a
+handful of emails an hour and those are reserved for sign-in. Anything else
+would mean paying for a mail service.
+
+## Patch notes
+
+`web/js/changelog.js` is the list of updates. The newest entry goes at the top,
+and bumping its `version` is what makes the ✨ icon light up for everyone. Next
+time each person opens the app they get the notes for anything they haven't
+read yet, once.
+
+Tags are `new`, `better`, `fix` and `note`. Write them for your mates, not for
+developers.
+
 ---
 
 ## Making changes
@@ -166,6 +191,7 @@ Common tweaks:
 | Change what an exercise is worth | `supabase/02_exercises.sql`, re-run it |
 | Add an exercise | Add a row in `supabase/02_exercises.sql`, re-run it |
 | Change or add weekly challenges | `challenge_templates` in `supabase/03_challenges.sql`, re-run it |
+| Write patch notes for an update | Add an entry at the top of `web/js/changelog.js` |
 | Add a badge | The `BADGES` array in `web/js/views/profile.js` — they're computed from stats, so new ones apply retroactively |
 | Change colours | The `:root` variables at the top of `web/css/app.css` |
 | Change season length | `season_ends` in the `crews` table |
@@ -181,6 +207,7 @@ supabase/
   01_schema.sql       tables, security rules, scoring pipeline, leaderboard
   02_exercises.sql    the exercise catalog and what each is worth
   03_challenges.sql   weekly challenge rotation, titles, season rollover
+  04_feedback.sql     the suggestion box
 web/
   index.html          the shell
   css/app.css         all the styling
@@ -189,6 +216,7 @@ web/
     api.js            every call to Supabase
     config.js         your Supabase keys
     ui.js             DOM helpers, sheets, toasts, date maths
+    changelog.js      patch notes — edit this every update
     demo.js           the fake backend behind demo mode
     views/            one file per screen
   sw.js               offline support

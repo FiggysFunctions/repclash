@@ -456,6 +456,98 @@ a { color: var(--ice); }
 }
 .tab-log.on .tab-i { filter: brightness(1.1); }
 
+/* ---------- What's new -------------------------------------------------- */
+
+/* Unread dot on the ✨ header button */
+.icon-btn.has-dot { position: relative; }
+.icon-btn.has-dot::after {
+  content: ''; position: absolute; top: 3px; right: 3px;
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--volt); border: 2px solid var(--bg-card);
+  animation: ping 2s ease-in-out infinite;
+}
+@keyframes ping {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.28); }
+}
+
+.release {
+  padding: 15px; margin-bottom: 12px;
+  background: var(--bg-card); border: 1px solid var(--line-soft);
+  border-radius: var(--r);
+}
+.release:first-child { border-color: rgba(198,242,78,.3); }
+.release-head { display: flex; align-items: center; gap: 9px; margin-bottom: 7px; }
+.release-v {
+  padding: 2px 9px; border-radius: 999px;
+  background: rgba(198,242,78,.14); color: var(--volt);
+  font-size: .72rem; font-weight: 850; letter-spacing: .04em;
+}
+.release-d { font-size: .74rem; color: var(--text-faint); font-weight: 650; }
+.release-t { margin: 0 0 4px; font-size: 1.08rem; font-weight: 820; letter-spacing: -.015em; }
+.release-b { margin: 0 0 12px; font-size: .87rem; color: var(--text-dim); }
+.release-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 9px; }
+.release-list li {
+  display: grid; grid-template-columns: auto 1fr; gap: 9px;
+  align-items: start; font-size: .88rem; line-height: 1.45;
+}
+
+.tag {
+  display: inline-block; padding: 2px 8px; border-radius: 999px;
+  font-size: .64rem; font-weight: 850; letter-spacing: .06em;
+  text-transform: uppercase; white-space: nowrap; margin-top: 2px;
+}
+.tag-new    { background: rgba(198,242,78,.15);  color: var(--volt); }
+.tag-better { background: rgba(78,168,255,.15);  color: var(--ice); }
+.tag-fix    { background: rgba(255,107,44,.15);  color: var(--flame-2); }
+.tag-note   { background: rgba(151,160,181,.14); color: var(--text-dim); }
+
+/* ---------- Feedback ---------------------------------------------------- */
+.kind-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; }
+.kind {
+  padding: 12px 8px; text-align: center; border-radius: 13px;
+  background: var(--bg-card); border: 1px solid var(--line-soft);
+  transition: border-color .15s, background .15s;
+}
+.kind.on { border-color: var(--flame); background: #1c1a1c; }
+.kind-em { display: block; font-size: 1.4rem; line-height: 1; }
+.kind-l  { display: block; font-size: .72rem; font-weight: 750; margin-top: 5px; }
+
+.fb {
+  padding: 13px; margin-bottom: 9px;
+  background: var(--bg-card); border: 1px solid var(--line-soft);
+  border-radius: var(--r);
+}
+.fb-top { display: flex; align-items: center; justify-content: space-between; gap: 9px; }
+.fb-kind { font-size: .78rem; font-weight: 780; color: var(--text-dim); }
+.fb-who  { font-size: .8rem; font-weight: 750; margin-top: 7px; }
+.fb-body { margin: 7px 0 0; font-size: .92rem; line-height: 1.5; white-space: pre-wrap; }
+.fb-date { font-size: .72rem; color: var(--text-faint); margin-top: 7px; }
+.fb-reply {
+  margin-top: 10px; padding: 10px 12px;
+  background: var(--bg-input); border-left: 3px solid var(--volt);
+  border-radius: 0 10px 10px 0; font-size: .85rem; line-height: 1.45;
+}
+.fb-reply b { color: var(--volt); }
+.fb-actions {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line-soft);
+}
+
+.st-new      { background: rgba(255,107,44,.16);  color: var(--flame-2); }
+.st-planned  { background: rgba(78,168,255,.15);  color: var(--ice); }
+.st-done     { background: rgba(198,242,78,.15);  color: var(--volt); }
+.st-declined { background: rgba(151,160,181,.14); color: var(--text-dim); }
+
+/* Unread count on the Me tab */
+.tab-i { position: relative; }
+.tab-badge {
+  position: absolute; top: -5px; left: 60%;
+  min-width: 17px; height: 17px; padding: 0 4px;
+  border-radius: 999px; background: var(--rose); color: #fff;
+  font-size: .62rem; font-weight: 850; line-height: 17px; text-align: center;
+}
+
 /* ---------- Toasts ------------------------------------------------------ */
 .toasts {
   position: fixed; left: 0; right: 0; top: calc(var(--safe-t) + 10px); z-index: 300;

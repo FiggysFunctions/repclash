@@ -4,7 +4,7 @@
 
 import * as api from '../api.js';
 import {
-  $, esc, num, fmtDate, weekStart, todayISO, untilEndOfWeek, MEDALS, sheet
+  $, esc, num, fmtDate, weekStart, todayISO, untilEndOfWeek, MEDALS, sheet, live
 } from '../ui.js';
 
 const UNITS = {
@@ -46,6 +46,8 @@ export async function render(root, ctx) {
       api.trophyCase(ctx.crew.id)
     ]);
 
+    if (!live(body)) return;          // a newer render already took over
+
     body.innerHTML = `
       ${challenge ? challengeCard(challenge) : noChallenge()}
       <div id="standings">
@@ -62,6 +64,7 @@ export async function render(root, ctx) {
         pastSheet(past.find(p => p.id === el.dataset.past), ctx)));
 
   } catch (e) {
+    if (!live(body)) return;
     body.innerHTML = `<div class="err">${esc(e.message)}</div>
       <button class="btn mt" id="retry">Try again</button>`;
     $('#retry', root)?.addEventListener('click', () => render(root, ctx));
@@ -94,6 +97,7 @@ async function loadStandings(root, challenge, ctx) {
   const host = $('#standings', root);
   try {
     const rows = await api.challengeStandings(challenge.id);
+    if (!live(host)) return;
     const scored = rows.filter(r => Number(r.score) > 0);
 
     if (!scored.length) {
@@ -119,7 +123,7 @@ async function loadStandings(root, challenge, ctx) {
           <div class="row-pts" style="font-size:.98rem">${fmtScore(challenge.metric, r.score)}</div>
         </div>`).join('')}`;
   } catch (e) {
-    host.innerHTML = `<p class="hint center">${esc(e.message)}</p>`;
+    if (live(host)) host.innerHTML = `<p class="hint center">${esc(e.message)}</p>`;
   }
 }
 

@@ -83,7 +83,7 @@ const CREW = {
   id: 'demo-crew',
   name: 'The Demo Crew',
   join_code: 'DEMO01',
-  owner_id: 'demo-jax',
+  owner_id: 'demo-me',   // so the demo shows the owner's inbox too
   season_name: 'Season 1',
   season_number: 1,
   season_starts: iso(addDays(new Date(), -45)),
@@ -287,6 +287,9 @@ export const currentUser = () => ({ id: 'demo-me', email: 'demo@repclash.app' })
 export async function getMyProfile() {
   return { ...CAST[0], created_at: new Date().toISOString() };
 }
+export async function getProfile(id) {
+  return CAST.find(c => c.id === id) || null;
+}
 export async function createProfile(name, emoji) {
   CAST[0].display_name = name; CAST[0].avatar_emoji = emoji;
   return CAST[0];
@@ -454,3 +457,54 @@ export async function deleteWorkout(id) {
 }
 
 export async function seasonChampions() { return []; }
+
+/* --- feedback ------------------------------------------------------------
+   In the demo you're the crew owner, so you see both sides: you can send a
+   suggestion and then triage it in the inbox. */
+function feedbackStore() {
+  const s = load();
+  s.feedback ??= [
+    { id: 'fb1', user_id: 'demo-jax', kind: 'exercise', status: 'new',  reply: null,
+      body: 'No kettlebell snatch in the list. Add it?',
+      created_at: new Date(Date.now() - 2 * 864e5).toISOString() },
+    { id: 'fb2', user_id: 'demo-sam', kind: 'scoring',  status: 'planned',
+      reply: 'Fair. Looking at it for the next update.',
+      body: 'Swimming feels underpaid — 1 km of front crawl is harder than 3 km of jogging.',
+      created_at: new Date(Date.now() - 5 * 864e5).toISOString() }
+  ];
+  return s;
+}
+
+export async function sendFeedback(_crew, kind, body) {
+  const s = feedbackStore();
+  s.feedback.unshift({
+    id: 'fb' + Date.now(), user_id: 'demo-me', kind, body,
+    status: 'new', reply: null, created_at: new Date().toISOString()
+  });
+  save();
+}
+
+export async function myFeedback() {
+  return feedbackStore().feedback.filter(f => f.user_id === 'demo-me');
+}
+
+export async function crewFeedback() {
+  return feedbackStore().feedback
+    .map(f => {
+      const p = CAST.find(c => c.id === f.user_id);
+      return { ...f, display_name: p.display_name, avatar_emoji: p.avatar_emoji };
+    })
+    .sort((a, b) => (b.status === 'new') - (a.status === 'new') ||
+                    b.created_at.localeCompare(a.created_at));
+}
+
+export async function feedbackUnread() {
+  return feedbackStore().feedback.filter(f => f.status === 'new').length;
+}
+
+export async function updateFeedback(id, patch) {
+  const s = feedbackStore();
+  const row = s.feedback.find(f => f.id === id);
+  if (row) Object.assign(row, patch);
+  save();
+}

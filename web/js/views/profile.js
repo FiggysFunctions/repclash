@@ -5,9 +5,11 @@
 import * as api from '../api.js';
 import {
   $, esc, num, plural, toastOk, toastBad, todayISO, addDays, fmtDate,
-  sheet, confirmSheet, AVATARS
+  sheet, confirmSheet, AVATARS, live
 } from '../ui.js';
 import { activeCrew } from '../config.js';
+import { openWhatsNew } from './whatsnew.js';
+import { openSubmit, openMine, openInbox } from './feedback.js';
 
 /* Badges are derived from stats rather than stored — that way adding a new
    one is a one-line change here and it applies retroactively to everyone. */
@@ -54,14 +56,16 @@ export async function render(root, ctx) {
 
   $('#settings', root).addEventListener('click', () => settingsSheet(ctx));
 
+  const body = $('#body', root);
   try {
     const [stats, trophies] = await Promise.all([
       api.memberStats(profile.id),
       api.trophyCase(crew.id)
     ]);
+    if (!live(body)) return;          // a newer render already took over
     const myTitles = trophies.filter(t => t.user_id === profile.id);
 
-    $('#body', root).innerHTML = `
+    body.innerHTML = `
       <div class="stats">
         <div class="stat"><div class="stat-n">${num(stats.total_points)}</div><div class="stat-l">Points</div></div>
         <div class="stat"><div class="stat-n">${num(stats.current_streak)}</div><div class="stat-l">Streak</div></div>
@@ -97,11 +101,29 @@ export async function render(root, ctx) {
         }).join('')}
       </div>
 
+      <div class="section-title">Have your say</div>
+      ${ctx.isOwner ? `
+        <button class="btn ${ctx.unread ? 'btn-primary' : ''}" id="inbox">
+          📥 Suggestion box${ctx.unread ? ` · ${ctx.unread} new` : ''}
+        </button>
+        <button class="btn mt" id="suggest">💡 Suggest something</button>
+      ` : `
+        <button class="btn btn-primary" id="suggest">💡 Suggest something</button>
+        <button class="btn mt" id="mine">📄 What I've suggested</button>
+      `}
+
+      <button class="btn mt" id="news">✨ What's new</button>
       <button class="btn mt" id="rules">How scoring works</button>`;
 
     $('#rules', root).addEventListener('click', () => rulesSheet(ctx));
+    $('#news', root).addEventListener('click', () => openWhatsNew());
+    $('#suggest', root).addEventListener('click', () =>
+      openSubmit(ctx, () => ctx.refreshUnread?.()));
+    $('#mine', root)?.addEventListener('click', () => openMine(ctx));
+    $('#inbox', root)?.addEventListener('click', () =>
+      openInbox(ctx, () => { ctx.refreshUnread?.(); render(root, ctx); }));
   } catch (e) {
-    $('#body', root).innerHTML = `<div class="err">${esc(e.message)}</div>`;
+    if (live(body)) body.innerHTML = `<div class="err">${esc(e.message)}</div>`;
   }
 }
 

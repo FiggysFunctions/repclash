@@ -14,6 +14,18 @@ export function esc(s) {
 }
 
 export const $  = (sel, root = document) => root.querySelector(sel);
+
+/**
+ * True if `node` is still attached to the page.
+ *
+ * Views fetch, then write their results into a container they looked up
+ * earlier. If a second render started in the meantime — a tab tapped twice, or
+ * a sheet asking for a refresh — that container has been replaced, and the
+ * slow render would write into a detached node and then wire handlers against
+ * elements nobody can see. Checking this after every await keeps the last
+ * render the one that wins.
+ */
+export const live = (node) => !!node?.isConnected;
 export const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
 /** Attach a click handler to every match of a selector. */

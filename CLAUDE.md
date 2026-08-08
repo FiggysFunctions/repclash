@@ -66,6 +66,37 @@ idempotent: it settles finished weeks, awards titles, creates the current week's
 challenge, and rolls the season if it ended. Adding a row to
 `challenge_templates` lengthens the rotation automatically.
 
+## Every update ships with patch notes
+
+Liam asked for this explicitly: **every change that users would notice gets an
+entry at the top of `web/js/changelog.js`** before deploying. Bumping the top
+entry's `version` is what lights up the ✨ icon and pops the notes once for
+everyone next time they open the app.
+
+Write them for a group of friends, not for developers — say what's different
+for them, not what was refactored. Tags are `new`, `better`, `fix`, `note`. If
+scoring changed in a way that moves anyone's standings, say so plainly in a
+`note`; people notice and will assume it's a bug otherwise.
+
+Internal-only changes (refactors, doc edits) don't need an entry.
+
+## Async rendering
+
+Views fetch and then write into a container they looked up before awaiting. A
+second render can start in the meantime — a tab tapped twice, or a sheet's
+`onChange` asking for a refresh — which detaches the first render's container.
+Always capture the node before an await and guard with `live(node)` from
+`ui.js` afterwards. Skipping this produces a view that silently stops
+responding to taps.
+
+`sheet()` replaces whatever sheet is open rather than stacking. Don't open a
+sheet from inside a sheet and then touch the outer one afterwards — close and
+reopen instead (see `replyTo` in `views/feedback.js`).
+
+Element ids must be unique across the whole document, not just within a view:
+view containers and open sheets coexist in the DOM. Sheet-local ids are
+prefixed (`fb-body`, not `body`).
+
 ## Conventions
 
 - Dates are plain local `YYYY-MM-DD` strings everywhere. Never involve UTC — a

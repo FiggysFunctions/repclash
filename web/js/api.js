@@ -196,6 +196,13 @@ export async function getMyProfile() {
   return rows[0] || null;
 }
 
+/** Someone else's profile. RLS only allows this for people you share a crew with. */
+export async function getProfile(id) {
+  if (demo.on()) return demo.getProfile(id);
+  const rows = await rest(`/profiles?id=eq.${id}&select=id,display_name,avatar_emoji`);
+  return rows[0] || null;
+}
+
 export async function createProfile(displayName, emoji) {
   if (demo.on()) return demo.createProfile(displayName, emoji);
   const uid = currentUser()?.id;
@@ -343,6 +350,32 @@ export const pastChallenges = (crewId, limit = 8) =>
 export const challengeStandings = (challengeId) =>
   demo.on() ? demo.challengeStandings(challengeId)
             : rpc('challenge_standings', { p_challenge: challengeId });
+
+/* -------------------------------------------------------------------------
+   Feedback
+   ------------------------------------------------------------------------- */
+
+export async function sendFeedback(crewId, kind, body) {
+  if (demo.on()) return demo.sendFeedback(crewId, kind, body);
+  await rest('/feedback', {
+    method: 'POST',
+    body: { user_id: currentUser()?.id, crew_id: crewId, kind, body: body.trim() }
+  });
+}
+
+export const myFeedback = (crewId) =>
+  demo.on() ? demo.myFeedback() : rpc('my_feedback', { p_crew: crewId });
+
+export const crewFeedback = (crewId) =>
+  demo.on() ? demo.crewFeedback() : rpc('crew_feedback', { p_crew: crewId });
+
+export const feedbackUnread = (crewId) =>
+  demo.on() ? demo.feedbackUnread() : rpc('feedback_unread', { p_crew: crewId });
+
+export async function updateFeedback(id, patch) {
+  if (demo.on()) return demo.updateFeedback(id, patch);
+  await rest(`/feedback?id=eq.${id}`, { method: 'PATCH', body: patch });
+}
 
 /* Points preview for one entry, without a round trip. Mirrors the
    entry_effort() function in the database — kept in sync by

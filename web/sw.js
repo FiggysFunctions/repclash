@@ -1,19 +1,19 @@
-/* ==========================================================================
-   Service worker — makes RepClash installable and usable with a bad signal.
+﻿/* ==========================================================================
+   Service worker â€” makes RepClash installable and usable with a bad signal.
 
    Strategy:
-     • Code (HTML/CSS/JS) → network first, with the cache as a fallback.
+     â€¢ Code (HTML/CSS/JS) â†’ network first, with the cache as a fallback.
        You get updates the moment they're deployed, and the app still opens
        on the Underground.
-     • Icons and the manifest → cache first. They never really change.
-     • Supabase API calls → never touched. A stale leaderboard is worse than
+     â€¢ Icons and the manifest â†’ cache first. They never really change.
+     â€¢ Supabase API calls â†’ never touched. A stale leaderboard is worse than
        an honest error.
 
    CACHE is bumped automatically by scripts/deploy.ps1 on every deploy, which
    evicts the old copies on everyone's phone.
    ========================================================================== */
 
-const CACHE = 'repclash-v1';
+const CACHE = 'repclash-v2';
 
 /* How long to wait for the network before falling back to cache. Long enough
    for a bad 4G signal, short enough that it never feels broken. */
@@ -27,11 +27,15 @@ const SHELL = [
   './js/api.js',
   './js/ui.js',
   './js/config.js',
+  './js/demo.js',
+  './js/changelog.js',
   './js/views/onboarding.js',
   './js/views/leaderboard.js',
   './js/views/log.js',
   './js/views/challenges.js',
   './js/views/profile.js',
+  './js/views/feedback.js',
+  './js/views/whatsnew.js',
   './manifest.webmanifest',
   './icons/icon.svg',
   './icons/icon-192.png',

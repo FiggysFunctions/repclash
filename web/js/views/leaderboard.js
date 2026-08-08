@@ -5,9 +5,11 @@
 import * as api from '../api.js';
 import {
   $, esc, num, ordinal, plural, toastOk, toastBad, todayISO, weekStart,
-  fmtDate, MEDALS, sheet
+  fmtDate, MEDALS, sheet, live
 } from '../ui.js';
 import { activeCrew } from '../config.js';
+import { hasUnread } from '../changelog.js';
+import { openWhatsNew } from './whatsnew.js';
 
 const RANGES = {
   week:   { label: 'This week' },
@@ -50,11 +52,14 @@ export async function render(root, ctx) {
     }));
 
   const [from, to] = rangeDates(crew);
+  const body = $('#body', root);
   let board;
   try {
     board = await api.leaderboard(crew.id, from, to);
+    if (!live(body)) return;          // a newer render already took over
   } catch (e) {
-    $('#body', root).innerHTML = `<div class="err">${esc(e.message)}</div>
+    if (!live(body)) return;
+    body.innerHTML = `<div class="err">${esc(e.message)}</div>
       <button class="btn mt" id="retry">Try again</button>`;
     $('#retry', root)?.addEventListener('click', () => render(root, ctx));
     return;
@@ -67,7 +72,7 @@ export async function render(root, ctx) {
 
   const anyPoints = board.some(r => r.points > 0);
 
-  $('#body', root).innerHTML = `
+  body.innerHTML = `
     ${heroCard(me, myRank, board.length, rules, crew)}
     ${anyPoints && board.length >= 3 ? podium(top3) : ''}
     ${!anyPoints ? emptyBoard() : ''}
@@ -97,6 +102,8 @@ function header(crew) {
         <h1>${esc(crew.name)}</h1>
         <p>${esc(crew.season_name)} · code <b>${esc(crew.join_code)}</b></p>
       </div>
+      <button class="icon-btn ${hasUnread() ? 'has-dot' : ''}" id="news"
+              title="What's new" aria-label="What's new">✨</button>
       <button class="icon-btn" id="invite" title="Invite" aria-label="Invite friends">👥</button>
       <button class="icon-btn" id="switch" title="Switch crew" aria-label="Switch crew">⇄</button>
     </div>`;
@@ -104,6 +111,7 @@ function header(crew) {
 
 function wireHeader(root, ctx) {
   $('#switch', root)?.addEventListener('click', () => crewSwitcher(ctx));
+  $('#news', root)?.addEventListener('click', () => openWhatsNew());
 }
 
 function heroCard(me, rank, total, rules, crew) {

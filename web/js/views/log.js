@@ -8,7 +8,7 @@
 import * as api from '../api.js';
 import {
   $, esc, num, toastOk, toastBad, todayISO, addDays, relDay, fmtDate,
-  sheet, confirmSheet, plural
+  sheet, confirmSheet, plural, live
 } from '../ui.js';
 
 const DRAFT_KEY = 'repclash.draft';
@@ -365,6 +365,7 @@ async function loadRecent(root, ctx) {
   if (!host) return;
   try {
     const rows = await api.myWorkouts(12);
+    if (!live(host)) return;          // a newer render already took over
     if (!rows.length) {
       host.innerHTML = '<p class="hint center" style="padding:12px">No sessions logged yet.</p>';
       return;
@@ -386,7 +387,7 @@ async function loadRecent(root, ctx) {
     host.querySelectorAll('[data-w]').forEach(el =>
       el.addEventListener('click', () => workoutSheet(rows.find(r => r.id === el.dataset.w), root, ctx)));
   } catch (e) {
-    host.innerHTML = `<p class="hint center">${esc(e.message)}</p>`;
+    if (live(host)) host.innerHTML = `<p class="hint center">${esc(e.message)}</p>`;
   }
 }
 

@@ -10,6 +10,8 @@ import * as api from './api.js';
 import { activeCrew } from './config.js';
 import { $, esc, toastBad } from './ui.js';
 
+import { hasUnread, markRead, primeIfFirstRun } from './changelog.js';
+import { openWhatsNew } from './views/whatsnew.js';
 import { renderSetup, renderAuth, renderProfileSetup, renderCrewSetup } from './views/onboarding.js';
 import * as leaderboardView from './views/leaderboard.js';
 import * as logView from './views/log.js';
@@ -73,11 +75,16 @@ async function boot() {
     return fatal(e.message);
   }
 
+  const isOwner = crew.owner_id === profile.id;
+
   ctx = {
-    crew, profile, rules,
+    crew, profile, rules, isOwner,
+    ownerName: isOwner ? 'you' : null,
+    unread: 0,                       // suggestions waiting, owner only
     reload: boot,
     goCrewSetup: () => stage((root, next) => renderCrewSetup(root, next, { canCancel: true })),
     bumpBoard: () => { /* views refetch on show, nothing to invalidate */ },
+    refreshUnread,
     go: showTab
   };
 
@@ -85,6 +92,34 @@ async function boot() {
   tabbar.hidden = false;
   drawTabs();
   showTab(currentTab);
+
+  if (isOwner) {
+    refreshUnread();
+  } else {
+    // Only so the suggestion box can say who it's going to.
+    api.getProfile(crew.owner_id)
+      .then(p => { if (p) ctx.ownerName = p.display_name; })
+      .catch(() => { /* cosmetic — the sheet has a fallback */ });
+  }
+
+  // Someone opening the app after an update gets the patch notes straight
+  // away, once. A brand-new install doesn't — they've not missed anything.
+  if (hasUnread() && !primeIfFirstRun()) {
+    setTimeout(() => openWhatsNew({ onlyUnread: true }), 700);
+  } else if (hasUnread()) {
+    markRead();
+  }
+}
+
+/** Refresh the owner's unread-suggestion badge without redrawing the tab. */
+async function refreshUnread() {
+  if (!ctx?.isOwner) return;
+  try {
+    ctx.unread = await api.feedbackUnread(ctx.crew.id) || 0;
+  } catch {
+    ctx.unread = 0;    // the table might not exist yet on an older database
+  }
+  drawTabs();
 }
 
 /** Render a full-screen onboarding step; `next` re-runs boot(). */
@@ -128,12 +163,17 @@ function hideSplash() {
    ------------------------------------------------------------------------- */
 
 function drawTabs() {
-  tabbar.innerHTML = TABS.map(t => `
+  tabbar.innerHTML = TABS.map(t => {
+    // The Me tab carries the owner's unread-suggestion count.
+    const badge = (t.id === 'me' && ctx?.unread > 0)
+      ? `<span class="tab-badge">${ctx.unread > 9 ? '9+' : ctx.unread}</span>` : '';
+    return `
     <button class="tab ${t.primary ? 'tab-log' : ''} ${t.id === currentTab ? 'on' : ''}"
             data-tab="${t.id}" aria-label="${t.label}">
-      <span class="tab-i">${t.icon}</span>
+      <span class="tab-i">${t.icon}${badge}</span>
       <span class="tab-l">${t.label}</span>
-    </button>`).join('');
+    </button>`;
+  }).join('');
 
   tabbar.querySelectorAll('[data-tab]').forEach(b =>
     b.addEventListener('click', () => showTab(b.dataset.tab)));

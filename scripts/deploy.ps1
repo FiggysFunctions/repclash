@@ -5,7 +5,11 @@
 #
 #  Bumps the service worker cache version (so everyone's phone picks up the
 #  new code instead of the copy it already has), commits, and pushes. GitHub
-#  Actions does the rest — live in about a minute.
+#  Actions does the rest - live in about a minute.
+#
+#  Keep this file pure ASCII. Windows PowerShell 5.1 reads .ps1 as ANSI unless
+#  there's a UTF-8 BOM, so a stray em dash decodes into a smart quote and
+#  silently terminates the next string literal.
 # =============================================================================
 
 param(
@@ -27,7 +31,7 @@ if ($sw -match "const CACHE = 'repclash-v(\d+)';") {
   Set-Content $swPath $sw -NoNewline -Encoding utf8
   Write-Host "Cache bumped to repclash-v$next" -ForegroundColor DarkGray
 } else {
-  Write-Warning "Could not find the CACHE constant in web/sw.js — skipping bump."
+  Write-Warning "Could not find the CACHE constant in web/sw.js - skipping bump."
 }
 
 # --- 2. Anything to ship? -----------------------------------------------------

@@ -1,0 +1,17 @@
+# OS noise
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# Local Claude Code settings (launch.json is shared, settings.local.json isn't)
+.claude/settings.local.json
+
+# Nothing here is built, but just in case
+node_modules/
+dist/
+*.log

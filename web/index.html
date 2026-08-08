@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+  <title>RepClash</title>
+  <meta name="description" content="Turn your workouts into a league with your mates.">
+
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#0c0e13">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="RepClash">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <div id="splash" class="splash">
+    <div class="splash-mark">🔥</div>
+    <div class="splash-name">RepClash</div>
+  </div>
+
+  <div id="app" class="app" hidden></div>
+  <nav id="tabbar" class="tabbar" hidden></nav>
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+  <div id="sheet-root"></div>
+
+  <noscript>
+    <p style="padding:2rem;color:#fff;font-family:system-ui">
+      RepClash needs JavaScript enabled.
+    </p>
+  </noscript>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

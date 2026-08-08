@@ -18,8 +18,8 @@
    ========================================================================== */
 
 const BAKED = {
-  url:     '',   // e.g. 'https://abcdefghijkl.supabase.co'
-  anonKey: ''    // the long "anon public" key from Supabase → Settings → API
+  url:     'https://hidinflomxilctxehxtn.supabase.co',   // e.g. 'https://abcdefghijkl.supabase.co'
+  anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhpZGluZmxvbXhpbGN0eGVoeHRuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxNzc0MzgsImV4cCI6MjEwMTc1MzQzOH0.8MCa7qUvOtbqgb5Phi5KeWnnxPccnpeM694DOQE1Etw'    // the long "anon public" key from Supabase → Settings → API
 };
 
 const LS_KEY = 'repclash.config';

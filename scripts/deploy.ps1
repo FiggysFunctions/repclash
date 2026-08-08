@@ -23,12 +23,18 @@ Set-Location $root
 
 # --- 1. Bump the service worker cache -----------------------------------------
 $swPath = Join-Path $root 'web\sw.js'
-$sw = Get-Content $swPath -Raw
+
+# Read and write UTF-8 explicitly. Get-Content/Set-Content default to the
+# system ANSI codepage here, which would mangle every non-ASCII character in
+# the file a little more on each deploy. WriteAllText with UTF8Encoding($false)
+# also avoids adding a BOM.
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+$sw = [System.IO.File]::ReadAllText($swPath, [System.Text.Encoding]::UTF8)
 
 if ($sw -match "const CACHE = 'repclash-v(\d+)';") {
   $next = [int]$Matches[1] + 1
   $sw = $sw -replace "const CACHE = 'repclash-v\d+';", "const CACHE = 'repclash-v$next';"
-  Set-Content $swPath $sw -NoNewline -Encoding utf8
+  [System.IO.File]::WriteAllText($swPath, $sw, $utf8NoBom)
   Write-Host "Cache bumped to repclash-v$next" -ForegroundColor DarkGray
 } else {
   Write-Warning "Could not find the CACHE constant in web/sw.js - skipping bump."

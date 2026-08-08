@@ -67,6 +67,10 @@ function humanise(body, status) {
     return 'This project still has email confirmation switched on. Turn it off in Supabase → Authentication → Sign In / Providers.';
   if (/Password should be at least/i.test(m))       return 'Password needs to be at least 6 characters.';
   if (/violates row-level security/i.test(m))       return 'You don\'t have permission to do that.';
+  if (/Only the crew owner/i.test(m))               return 'Only the person who created the crew can read the suggestion box.';
+  // The app has shipped a feature whose SQL hasn't been run yet.
+  if (/does not exist|Could not find the (table|function)|schema cache/i.test(m))
+    return 'This bit needs a database update. Liam: run the newest file in supabase/ in the Supabase SQL editor.';
   if (/JWT|token is expired/i.test(m))              return 'Your session expired — sign in again.';
   if (status === 0)                                 return 'No connection. Check your internet and try again.';
   return m || `Something went wrong (${status}).`;

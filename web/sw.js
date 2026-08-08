@@ -13,7 +13,7 @@
    evicts the old copies on everyone's phone.
    ========================================================================== */
 
-const CACHE = 'repclash-v3';
+const CACHE = 'repclash-v4';
 
 /* How long to wait for the network before falling back to cache. Long enough
    for a bad 4G signal, short enough that it never feels broken. */

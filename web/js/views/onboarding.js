@@ -5,7 +5,7 @@
 
 import * as api from '../api.js';
 import { saveConfig, activeCrew } from '../config.js';
-import { $, esc, toastOk, toastBad, randomAvatar, AVATARS } from '../ui.js';
+import { $, esc, toastOk, toastBad, randomAvatar, STARTER_AVATARS } from '../ui.js';
 
 /* -------------------------------------------------------------------------
    1. Connect to Supabase (only shown if config.js hasn't been filled in)
@@ -189,7 +189,7 @@ export function renderProfileSetup(root, next) {
             Avatar
           </label>
           <div class="ach-grid" id="avs" style="grid-template-columns:repeat(auto-fill,minmax(52px,1fr))">
-            ${AVATARS.map(a => `
+            ${STARTER_AVATARS.map(a => `
               <button class="ach ${a === picked ? 'got' : ''}" data-av="${a}"
                       style="padding:9px 2px" aria-label="Choose ${a}">
                 <div class="ach-em">${a}</div>

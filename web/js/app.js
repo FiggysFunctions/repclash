@@ -8,7 +8,7 @@
 
 import * as api from './api.js';
 import { activeCrew } from './config.js';
-import { $, esc, toastBad } from './ui.js';
+import { $, esc, toastBad, applyTheme, restoreTheme } from './ui.js';
 
 import { hasUnread, markRead, primeIfFirstRun } from './changelog.js';
 import { openWhatsNew } from './views/whatsnew.js';
@@ -50,6 +50,10 @@ async function boot() {
     return fatal(e.message);
   }
   if (!profile) return stage(renderProfileSetup);
+
+  // Season pass theme. restoreTheme() has already applied the cached value, so
+  // this only does anything when it changed on another device.
+  applyTheme(profile.equipped_theme);
 
   let crews;
   try {
@@ -218,4 +222,5 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+restoreTheme();   // before first paint, so there's no flash of the default
 boot();

@@ -456,6 +456,133 @@ a { color: var(--ice); }
 }
 .tab-log.on .tab-i { filter: brightness(1.1); }
 
+/* ==========================================================================
+   SEASON PASS THEMES
+   Unlocked at tiers 13 and 25. Each one only reassigns the variables above,
+   so every component follows automatically.
+   ========================================================================== */
+
+:root[data-rc-theme="blood"] {
+  --bg:        #0e0708;
+  --bg-raise:  #1a0e11;
+  --bg-card:   #201216;
+  --bg-input:  #150b0e;
+  --line:      #3a1f26;
+  --line-soft: #2b171c;
+  --flame:     #e5203f;
+  --flame-2:   #ff5470;
+  --volt:      #ff9bab;
+  --ice:       #ff7a8f;
+}
+:root[data-rc-theme="blood"] body {
+  background-image:
+    radial-gradient(1100px 520px at 50% -18%, rgba(229,32,63,.22), transparent 62%),
+    radial-gradient(760px 420px at 108% 4%, rgba(255,84,112,.08), transparent 60%);
+}
+
+:root[data-rc-theme="terminal"] {
+  --bg:        #040705;
+  --bg-raise:  #0a120c;
+  --bg-card:   #0c1710;
+  --bg-input:  #071009;
+  --line:      #1c3524;
+  --line-soft: #14261a;
+  --text:      #d6ffe4;
+  --text-dim:  #7bb391;
+  --text-faint:#4d7a5e;
+  --flame:     #22e06a;
+  --flame-2:   #7bff9e;
+  --volt:      #b6ff5c;
+  --ice:       #4dffc3;
+  --gold:      #b6ff5c;
+}
+:root[data-rc-theme="terminal"] body {
+  background-image:
+    radial-gradient(1100px 520px at 50% -18%, rgba(34,224,106,.15), transparent 62%);
+}
+:root[data-rc-theme="terminal"] {
+  --font: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+/* ---------- Name treatments --------------------------------------------- */
+.nm-ember, .nm-volt, .nm-shimmer {
+  background-clip: text; -webkit-background-clip: text;
+  color: transparent; -webkit-text-fill-color: transparent;
+  font-weight: 850;
+}
+.nm-ember   { background-image: linear-gradient(95deg, #ff6b2c, #ffce4a); }
+.nm-volt    { background-image: linear-gradient(95deg, #c6f24e, #6ef2b0); }
+.nm-shimmer {
+  background-image: linear-gradient(95deg, #ff6b2c, #ffce4a, #c6f24e, #4ea8ff, #ff6b2c);
+  background-size: 300% 100%;
+  animation: shimmer-name 4s linear infinite;
+}
+@keyframes shimmer-name { to { background-position: -300% 0; } }
+
+/* ---------- Pass progress card ------------------------------------------ */
+.passcard {
+  display: block; width: 100%; text-align: left;
+  background:
+    linear-gradient(135deg, rgba(255,206,74,.16), rgba(255,107,44,.07)),
+    var(--bg-card);
+  border: 1px solid rgba(255,206,74,.28);
+  border-radius: var(--r-lg); padding: 17px; margin-bottom: 14px;
+  transition: transform .12s;
+}
+.passcard:active { transform: scale(.99); }
+.passcard-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.passcard-tier {
+  font-size: 1.85rem; font-weight: 880; letter-spacing: -.03em; line-height: 1.1;
+}
+.passcard-tier span { font-size: .95rem; font-weight: 750; color: var(--text-faint); }
+.passcard-xp { text-align: right; }
+.passcard-xp b {
+  display: block; font-size: 1.25rem; font-weight: 850;
+  font-variant-numeric: tabular-nums; color: var(--gold);
+}
+.passcard-xp span {
+  font-size: .64rem; font-weight: 800; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--text-faint);
+}
+.passcard-foot { margin-top: 11px; font-size: .74rem; color: var(--text-faint); font-weight: 650; }
+
+/* ---------- Tier ladder -------------------------------------------------- */
+.tier {
+  display: flex; align-items: center; gap: 11px;
+  padding: 10px 12px; margin-bottom: 6px;
+  background: var(--bg-card); border: 1px solid var(--line-soft);
+  border-radius: 13px; opacity: .55;
+}
+.tier-done { opacity: 1; }
+.tier-now  { border-color: var(--gold); background: #1d1a14; opacity: 1; }
+.tier-n {
+  width: 26px; flex: none; text-align: center;
+  font-weight: 850; font-size: .82rem; color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+.tier-icon {
+  width: 36px; height: 36px; flex: none; border-radius: 10px;
+  display: grid; place-content: center; font-size: 1.2rem;
+  background: var(--bg-raise); border: 1px solid var(--line);
+}
+.tier-locked { font-size: .85rem; }
+.tier-label { font-size: .89rem; font-weight: 700; }
+.tier-xp { font-size: .73rem; color: var(--text-faint); font-variant-numeric: tabular-nums; }
+.tier-here {
+  flex: none; padding: 2px 8px; border-radius: 999px;
+  background: var(--gold); color: #1a1405;
+  font-size: .6rem; font-weight: 880; letter-spacing: .08em;
+}
+
+.tier-chip {
+  display: inline-block; margin-left: 5px; padding: 1px 6px;
+  border-radius: 999px; font-size: .64rem; font-weight: 850; vertical-align: 1px;
+  background: rgba(255,206,74,.15); color: var(--gold);
+}
+
+.ach-locked { cursor: not-allowed; }
+.row-locked { opacity: .45; cursor: not-allowed; }
+
 /* ---------- Feed -------------------------------------------------------- */
 .post {
   background: var(--bg-card); border: 1px solid var(--line-soft);

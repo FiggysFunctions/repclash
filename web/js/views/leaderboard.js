@@ -10,6 +10,7 @@ import {
 import { activeCrew } from '../config.js';
 import { hasUnread } from '../changelog.js';
 import { openWhatsNew } from './whatsnew.js';
+import { name, tierChip } from './pass.js';
 
 const RANGES = {
   week:   { label: 'This week' },
@@ -53,9 +54,16 @@ export async function render(root, ctx) {
 
   const [from, to] = rangeDates(crew);
   const body = $('#body', root);
-  let board;
+  let board, passByUser = new Map();
   try {
-    board = await api.leaderboard(crew.id, from, to);
+    const [b, pass] = await Promise.all([
+      api.leaderboard(crew.id, from, to),
+      // Cosmetics and tiers are a nice-to-have: if the pass SQL hasn't been
+      // run yet the board should still render.
+      api.crewPass(crew.id).catch(() => [])
+    ]);
+    board = b;
+    passByUser = new Map(pass.map(p => [p.user_id, p]));
     if (!live(body)) return;          // a newer render already took over
   } catch (e) {
     if (!live(body)) return;
@@ -74,10 +82,10 @@ export async function render(root, ctx) {
 
   body.innerHTML = `
     ${heroCard(me, myRank, board.length, rules, crew)}
-    ${anyPoints && board.length >= 3 ? podium(top3) : ''}
+    ${anyPoints && board.length >= 3 ? podium(top3, passByUser) : ''}
     ${!anyPoints ? emptyBoard() : ''}
     ${anyPoints ? rowsHtml(board.length >= 3 ? rest : board,
-                           board.length >= 3 ? 4 : 1, profile.id) : ''}
+                           board.length >= 3 ? 4 : 1, profile.id, passByUser) : ''}
     ${board.length === 1 ? soloNudge(crew) : ''}
     <p class="hint center mt">
       ${range === 'season'
@@ -151,7 +159,7 @@ function heroCard(me, rank, total, rules, crew) {
     </div>`;
 }
 
-function podium(top3) {
+function podium(top3, passByUser) {
   // Visual order is 2nd, 1st, 3rd.
   const order = [top3[1], top3[0], top3[2]];
   const cls   = ['pod-2', 'pod-1', 'pod-3'];
@@ -162,23 +170,25 @@ function podium(top3) {
       <div class="pod ${cls[i]}" data-member="${esc(p.user_id)}">
         ${place[i] === 1 ? '<div class="pod-crown">👑</div>' : ''}
         <div class="pod-av">${esc(p.avatar_emoji)}</div>
-        <div class="pod-name">${esc(p.display_name)}</div>
+        <div class="pod-name">${name(p.display_name, passByUser.get(p.user_id)?.colour)}</div>
         <div class="pod-pts">${num(p.points)}</div>
         <div class="pod-block">${MEDALS[place[i] - 1]}</div>
       </div>`).join('')}
   </div>`;
 }
 
-function rowsHtml(rows, startRank, myId) {
+function rowsHtml(rows, startRank, myId, passByUser) {
   if (!rows.length) return '';
   return rows.map((r, i) => {
     const rank = startRank + i;
+    const pass = passByUser.get(r.user_id);
     return `
       <div class="row ${r.user_id === myId ? 'row-me' : ''}" data-member="${esc(r.user_id)}">
         <div class="row-rank">${rank}</div>
         <div class="row-av">${esc(r.avatar_emoji)}</div>
         <div class="row-main">
-          <div class="row-name">${esc(r.display_name)}
+          <div class="row-name">${name(r.display_name, pass?.colour)}
+            ${pass ? tierChip(pass.tier) : ''}
             ${r.title_count > 0 ? `<span class="badge-mini">🏆 ${r.title_count}</span>` : ''}
           </div>
           <div class="row-sub">

@@ -33,6 +33,25 @@ export function on(root, sel, handler, evt = 'click') {
   $$(sel, root).forEach(el => el.addEventListener(evt, handler));
 }
 
+/* --- themes ---------------------------------------------------------------
+   Unlocked through the season pass. Stamps the root element; the CSS does the
+   rest. Applied before first paint so there's no flash of the default. */
+export function applyTheme(theme) {
+  const root = document.documentElement;
+  if (theme) root.setAttribute('data-rc-theme', theme);
+  else       root.removeAttribute('data-rc-theme');
+  try {
+    theme ? localStorage.setItem('repclash.theme', theme)
+          : localStorage.removeItem('repclash.theme');
+  } catch { /* private browsing — the theme just won't persist */ }
+}
+
+/** Re-apply the remembered theme immediately on boot, before the profile
+    round-trip finishes, so the app doesn't flash orange then go red. */
+export function restoreTheme() {
+  try { applyTheme(localStorage.getItem('repclash.theme')); } catch { /* ignore */ }
+}
+
 /* --- toasts --------------------------------------------------------------- */
 export function toast(msg, kind = '') {
   const host = $('#toasts');
@@ -168,7 +187,13 @@ export const AVATARS = [
   '🐻','🦖','👹','🤖','👑','💀','🌶️','🍑','🥷','🧟','🐗','🦏','🐅','🚀'
 ];
 
-/** Deterministic emoji so a new member always gets something sensible. */
+/* What you get before earning anything. The other 20 are season pass rewards.
+   Must match app.starter_avatars() in supabase/06_season_pass.sql — the
+   server rejects anything you haven't unlocked, so a mismatch here just means
+   the picker offers something that won't save. */
+export const STARTER_AVATARS = ['💪','🔥','🏋️','🏃','🚴','🧗','🥊','🐺'];
+
+/** So a new member always starts with something other than the default. */
 export function randomAvatar() {
-  return AVATARS[Math.floor(Math.random() * AVATARS.length)];
+  return STARTER_AVATARS[Math.floor(Math.random() * STARTER_AVATARS.length)];
 }

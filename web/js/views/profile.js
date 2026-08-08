@@ -5,11 +5,12 @@
 import * as api from '../api.js';
 import {
   $, esc, num, plural, toastOk, toastBad, todayISO, addDays, fmtDate,
-  sheet, confirmSheet, AVATARS, live
+  sheet, confirmSheet, live
 } from '../ui.js';
 import { activeCrew } from '../config.js';
 import { openWhatsNew } from './whatsnew.js';
 import { openSubmit, openMine, openInbox } from './feedback.js';
+import { progressCard, openPass, openCosmetics } from './pass.js';
 
 /* Badges are derived from stats rather than stored — that way adding a new
    one is a one-line change here and it applies retroactively to everyone. */
@@ -58,14 +59,17 @@ export async function render(root, ctx) {
 
   const body = $('#body', root);
   try {
-    const [stats, trophies] = await Promise.all([
+    const [stats, trophies, pass] = await Promise.all([
       api.memberStats(profile.id),
-      api.trophyCase(crew.id)
+      api.trophyCase(crew.id),
+      api.myPass(crew.id).catch(() => null)   // pass SQL might not be run yet
     ]);
     if (!live(body)) return;          // a newer render already took over
     const myTitles = trophies.filter(t => t.user_id === profile.id);
 
     body.innerHTML = `
+      ${pass ? progressCard(pass) : ''}
+
       <div class="stats">
         <div class="stat"><div class="stat-n">${num(stats.total_points)}</div><div class="stat-l">Points</div></div>
         <div class="stat"><div class="stat-n">${num(stats.current_streak)}</div><div class="stat-l">Streak</div></div>
@@ -114,6 +118,9 @@ export async function render(root, ctx) {
 
       <button class="btn mt" id="news">✨ What's new</button>
       <button class="btn mt" id="rules">How scoring works</button>`;
+
+    $('#passcard', root)?.addEventListener('click', () =>
+      openPass(ctx, pass, () => render(root, ctx)));
 
     $('#rules', root).addEventListener('click', () => rulesSheet(ctx));
     $('#news', root).addEventListener('click', () => openWhatsNew());
@@ -229,7 +236,8 @@ function settingsSheet(ctx) {
               aria-label="Show my workouts to the crew"><span></span></button>
     </div>
 
-    <button class="btn" data-edit>Change name or avatar</button>
+    <button class="btn" data-look>🎨 Avatar, colours and themes</button>
+    <button class="btn mt" data-edit>Change display name</button>
     ${demo ? '' : '<button class="btn mt" data-crews>Switch or join a crew</button>'}
     <button class="btn mt" data-install>How to install this app</button>
     ${demo ? `
@@ -276,6 +284,7 @@ function settingsSheet(ctx) {
   });
 
   $('[data-edit]', s.el).addEventListener('click', () => { s.close(); editSheet(ctx); });
+  $('[data-look]', s.el).addEventListener('click', () => { s.close(); customise(ctx); });
   $('[data-crews]', s.el)?.addEventListener('click', () => { s.close(); ctx.goCrewSetup(); });
   $('[data-install]', s.el).addEventListener('click', () => { s.close(); installSheet(); });
 
@@ -305,42 +314,32 @@ function settingsSheet(ctx) {
   });
 }
 
+/* Name only. The avatar moved to the pass's Customise sheet, because which
+   ones you can pick now depends on what you've unlocked — and that has to be
+   checked by the server, not here. */
 function editSheet(ctx) {
-  let picked = ctx.profile.avatar_emoji;
-
   const s = sheet(`
-    <h2>Edit profile</h2>
+    <h2>Change your name</h2>
+    <p class="sub">This is what the crew sees on the leaderboard.</p>
     <div class="field">
-      <label for="name">Display name</label>
-      <input class="input" id="name" maxlength="24" value="${esc(ctx.profile.display_name)}">
+      <label for="dispname">Display name</label>
+      <input class="input" id="dispname" maxlength="24"
+             value="${esc(ctx.profile.display_name)}">
     </div>
-    <label style="display:block;margin-bottom:6px;font-size:.74rem;font-weight:800;
-                  letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint)">Avatar</label>
-    <div class="ach-grid" style="grid-template-columns:repeat(auto-fill,minmax(52px,1fr))">
-      ${AVATARS.map(a => `
-        <button class="ach ${a === picked ? 'got' : ''}" data-av="${a}" style="padding:9px 2px"
-                aria-label="Choose ${a}">
-          <div class="ach-em">${a}</div>
-        </button>`).join('')}
-    </div>
-    <button class="btn btn-primary mt" data-save>Save</button>
+    <button class="btn btn-primary" data-save>Save</button>
+    <button class="btn btn-ghost mt" data-look>🎨 Change avatar and colours instead</button>
   `);
 
-  // Swap the highlight in place — redrawing the sheet would lose the name field.
-  s.el.querySelectorAll('[data-av]').forEach(b =>
-    b.addEventListener('click', () => {
-      picked = b.dataset.av;
-      s.el.querySelectorAll('[data-av]').forEach(x => x.classList.toggle('got', x === b));
-    }));
+  $('[data-look]', s.el).addEventListener('click', () => { s.close(); customise(ctx); });
 
   $('[data-save]', s.el).addEventListener('click', async () => {
     const btn = $('[data-save]', s.el);
-    const name = $('#name', s.el).value.trim();
+    const name = $('#dispname', s.el).value.trim();
     if (name.length < 2) return toastBad('Name needs at least 2 characters.');
     btn.disabled = true;
     btn.textContent = 'Saving…';
     try {
-      const updated = await api.updateProfile({ display_name: name, avatar_emoji: picked });
+      const updated = await api.updateProfile({ display_name: name });
       Object.assign(ctx.profile, updated);
       s.close();
       toastOk('Saved');
@@ -351,6 +350,16 @@ function editSheet(ctx) {
       btn.textContent = 'Save';
     }
   });
+}
+
+/** Fetches the pass first, since what's on offer depends on your tier. */
+async function customise(ctx) {
+  try {
+    const pass = await api.myPass(ctx.crew.id);
+    openCosmetics(ctx, pass, () => ctx.reload());
+  } catch (e) {
+    toastBad(e.message);
+  }
 }
 
 function installSheet() {

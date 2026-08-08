@@ -46,6 +46,34 @@ streak, and weekly-target bonuses, so showing up four times a week beats one
 enormous session. That's a product decision Liam made, not an accident. Don't
 "optimise" it toward raw volume without asking.
 
+## Season pass
+
+Four rules, all deliberate — Liam signed off on each:
+
+1. **Pass XP is not leaderboard points.** Day XP is capped at one lot per day so
+   the pass rewards consistency while the leaderboard rewards output. If you
+   make them correlate, the pass stops being a separate reward axis and becomes
+   noise.
+2. **Rewards are cosmetic, forever.** No tier may ever grant a scoring bonus —
+   that would make the league unwinnable for anyone who joined late.
+3. **Unlocks are permanent.** `pass_unlocks` is keyed `(user_id, tier)` with no
+   season, on purpose. Seasons reset tier, never rewards.
+4. **Late joiners get catch-up credit** (`xp_catchup_week`), derived from
+   `crew_members.joined_at`.
+
+Cosmetics **must** be equipped through `public.equip()`. Direct UPDATE on
+`profiles.avatar_emoji`, `equipped_colour` and `equipped_theme` is revoked at
+the column level in `06_season_pass.sql`, because a client-side check is no
+check at all — anyone could PATCH themselves the tier 29 shimmer.
+
+Pass-awarded titles carry `titles.source = 'pass'` and are excluded from the
+challenge-win XP term. Without that filter, a pass title would grant XP that
+could unlock the next title: a feedback loop.
+
+Themes are pure CSS variable overrides under `:root[data-rc-theme="..."]`.
+`restoreTheme()` runs before `boot()` so there's no flash of the default while
+the profile loads.
+
 ## Privacy
 
 `workouts.is_private` hides a session's *detail* from the feed. It deliberately

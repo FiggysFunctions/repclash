@@ -514,6 +514,105 @@ export async function crewFeed({ limit = 25, before = null, userId = null } = {}
 
 export async function seasonChampions() { return []; }
 
+/* --- season pass ---------------------------------------------------------
+   Mirrors supabase/06_season_pass.sql. That file is the authority. */
+
+const PASS_RULES = {
+  xp_active_day: 100, xp_weekly_target: 150,
+  xp_challenge_win: 250, xp_catchup_week: 400, max_tier: 30
+};
+
+export const STARTER_AVATARS = ['💪','🔥','🏋️','🏃','🚴','🧗','🥊','🐺'];
+
+const TIERS = [
+  [ 1,     0, null,     null,           'Season started'],
+  [ 2,   150, 'avatar', '🦍',           'Gorilla'],
+  [ 3,   320, 'avatar', '🦁',           'Lion'],
+  [ 4,   510, 'avatar', '🦅',           'Eagle'],
+  [ 5,   720, 'title',  'Warming Up',   'Title: Warming Up'],
+  [ 6,   950, 'avatar', '⚡',           'Bolt'],
+  [ 7,  1200, 'avatar', '🐉',           'Dragon'],
+  [ 8,  1470, 'avatar', '🦈',           'Shark'],
+  [ 9,  1760, 'colour', 'ember',        'Ember name'],
+  [10,  2070, 'avatar', '🐻',           'Bear'],
+  [11,  2400, 'avatar', '🦖',           'T-Rex'],
+  [12,  2750, 'avatar', '🐗',           'Boar'],
+  [13,  3120, 'theme',  'blood',        'Blood theme'],
+  [14,  3510, 'avatar', '🦏',           'Rhino'],
+  [15,  3920, 'title',  'Halfway Beast','Title: Halfway Beast'],
+  [16,  4350, 'avatar', '🐅',           'Tiger'],
+  [17,  4800, 'avatar', '🌶️',           'Chilli'],
+  [18,  5270, 'avatar', '🥷',           'Ninja'],
+  [19,  5760, 'colour', 'volt',         'Volt name'],
+  [20,  6270, 'avatar', '🤖',           'Robot'],
+  [21,  6800, 'avatar', '🧟',           'Zombie'],
+  [22,  7350, 'title',  'Relentless',   'Title: Relentless'],
+  [23,  7920, 'avatar', '👹',           'Oni'],
+  [24,  8510, 'avatar', '🚀',           'Rocket'],
+  [25,  9120, 'theme',  'terminal',     'Terminal theme'],
+  [26,  9750, 'avatar', '💀',           'Skull'],
+  [27, 10400, 'avatar', '🍑',           'Peach'],
+  [28, 11070, 'avatar', '👑',           'Crown'],
+  [29, 11760, 'colour', 'shimmer',      'Shimmer name'],
+  [30, 12470, 'title',  'Maxed Out',    'Title: Maxed Out']
+].map(([tier, xp_required, reward_kind, reward_value, reward_label]) =>
+  ({ tier, xp_required, reward_kind, reward_value, reward_label }));
+
+function xpFor(userId) {
+  const days  = dayTotals(userId).filter(d => d.qualified &&
+                  d.day >= CREW.season_starts && d.day <= CREW.season_ends);
+  const weeks = weekBonuses(userId).filter(w => w.week_bonus > 0);
+  const wins  = load().titles.filter(t => t.user_id === userId).length;
+  return days.length  * PASS_RULES.xp_active_day
+       + weeks.length * PASS_RULES.xp_weekly_target
+       + wins         * PASS_RULES.xp_challenge_win;
+}
+
+const tierFor = (xp) =>
+  TIERS.reduce((best, t) => (t.xp_required <= xp ? t.tier : best), 1);
+
+export async function crewPass() {
+  return CAST.map(p => {
+    const xp = xpFor(p.id);
+    return { user_id: p.id, xp, tier: tierFor(xp), colour: p.equipped_colour || null };
+  });
+}
+
+export async function myPass() {
+  const xp = xpFor('demo-me');
+  const tier = tierFor(xp);
+  const today = new Date();
+  const end = parseISO(CREW.season_ends);
+  return {
+    xp, tier,
+    max_tier: PASS_RULES.max_tier,
+    season_name: CREW.season_name,
+    season_starts: CREW.season_starts,
+    season_ends: CREW.season_ends,
+    days_left: Math.max(0, Math.round((end - today) / 864e5)),
+    tiers: TIERS.map(t => ({ ...t, unlocked: t.tier <= tier })),
+    starter_avatars: STARTER_AVATARS
+  };
+}
+
+export async function equip({ avatar, colour, theme, clearColour, clearTheme }) {
+  const tier = tierFor(xpFor('demo-me'));
+  const owns = (kind, value) =>
+    TIERS.some(t => t.reward_kind === kind && t.reward_value === value && t.tier <= tier);
+
+  if (avatar && !STARTER_AVATARS.includes(avatar) && !owns('avatar', avatar))
+    throw new Error('You have not unlocked that avatar yet');
+  if (colour && !owns('colour', colour))
+    throw new Error('You have not unlocked that name colour yet');
+  if (theme && !owns('theme', theme))
+    throw new Error('You have not unlocked that theme yet');
+
+  if (avatar) CAST[0].avatar_emoji = avatar;
+  if (clearColour) CAST[0].equipped_colour = null; else if (colour) CAST[0].equipped_colour = colour;
+  if (clearTheme)  CAST[0].equipped_theme  = null; else if (theme)  CAST[0].equipped_theme  = theme;
+  return CAST[0];
+}
+
 /* --- feedback ------------------------------------------------------------
    In the demo you're the crew owner, so you see both sides: you can send a
    suggestion and then triage it in the inbox. */

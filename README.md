@@ -47,8 +47,14 @@ You need two free accounts. Neither ever asks for a card.
 4. Do the same with `supabase/03_challenges.sql`.
 5. Do the same with `supabase/04_feedback.sql`.
 6. Do the same with `supabase/05_feed_privacy.sql`.
+7. Do the same with `supabase/06_season_pass.sql`.
 
 Order matters — run them in number order.
+
+> One caveat if you ever re-run an earlier file: `01_schema.sql` grants UPDATE
+> on the whole `profiles` table, while `06_season_pass.sql` narrows that so
+> cosmetics can only be changed through the `equip()` function that checks your
+> unlocks. If you re-run 01, re-run 06 afterwards.
 
 ### Step 3 — Turn off email confirmation
 
@@ -149,6 +155,37 @@ Seasons run 90 days. When one ends, the leader is crowned champion, gets a
 To change the challenges, edit the `challenge_templates` rows in
 `supabase/03_challenges.sql` and re-run it. Adding a row lengthens the rotation.
 
+## The Season Pass
+
+A 30-tier cosmetic track running alongside each 90-day season. Progress is the
+gold card at the top of the **Me** tab; tap it for the ladder.
+
+XP comes from consistency, not volume:
+
+| | |
+|---|---|
+| Any day you train | **+100** |
+| Hitting your weekly target | **+150** |
+| Winning a weekly challenge | **+250** |
+
+**The pass is not a second leaderboard.** Day XP is capped at one lot per day,
+so a four-hour Sunday earns exactly what a solid Tuesday earns. Whoever's
+topping the table doesn't automatically win the pass — the person who never
+misses does. That's the point of having both.
+
+Rewards are **20 avatars, 3 name colours, 2 app themes and 4 titles**, and
+they're **permanent** — a new season resets your tier, never your unlocks.
+
+Anyone joining part-way through a season is credited 400 XP for each full week
+that had already passed, so nobody arrives already beaten.
+
+**Nothing in the pass affects scoring**, deliberately. The moment a tier granted
+a points multiplier, the league would be decided by who signed up first.
+
+To retune it: the XP rates are in `app.pass_rules()` and the ladder is the
+`pass_tiers` rows, both in `supabase/06_season_pass.sql`. Re-run the file and
+changes apply retroactively.
+
 ## The feed and privacy
 
 The **👀 Feed** tab shows every session the crew logs, with the real numbers —
@@ -211,6 +248,8 @@ Common tweaks:
 | Add an exercise | Add a row in `supabase/02_exercises.sql`, re-run it |
 | Change or add weekly challenges | `challenge_templates` in `supabase/03_challenges.sql`, re-run it |
 | Write patch notes for an update | Add an entry at the top of `web/js/changelog.js` |
+| Retune season pass XP or rewards | `app.pass_rules()` / `pass_tiers` in `supabase/06_season_pass.sql`, re-run it |
+| Add an app theme | A `:root[data-rc-theme="..."]` block in `web/css/app.css`, plus a `pass_tiers` row and an entry in `THEMES` in `web/js/views/pass.js` |
 | Add a badge | The `BADGES` array in `web/js/views/profile.js` — they're computed from stats, so new ones apply retroactively |
 | Change colours | The `:root` variables at the top of `web/css/app.css` |
 | Change season length | `season_ends` in the `crews` table |
@@ -228,6 +267,7 @@ supabase/
   03_challenges.sql   weekly challenge rotation, titles, season rollover
   04_feedback.sql     the suggestion box
   05_feed_privacy.sql the workout feed and per-session privacy
+  06_season_pass.sql  the season pass: XP, tiers, unlocks, cosmetics
 web/
   index.html          the shell
   css/app.css         all the styling

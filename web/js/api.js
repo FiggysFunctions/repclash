@@ -373,6 +373,28 @@ export const challengeStandings = (challengeId) =>
             : rpc('challenge_standings', { p_challenge: challengeId });
 
 /* -------------------------------------------------------------------------
+   Season pass
+   ------------------------------------------------------------------------- */
+
+export const myPass = (crewId) =>
+  demo.on() ? demo.myPass() : rpc('my_pass', { p_crew: crewId });
+
+export const crewPass = (crewId) =>
+  demo.on() ? demo.crewPass() : rpc('crew_pass', { p_crew: crewId });
+
+/** Cosmetics go through the server so unlocks can't be faked. */
+export async function equip({ avatar, colour, theme, clearColour, clearTheme } = {}) {
+  if (demo.on()) return demo.equip({ avatar, colour, theme, clearColour, clearTheme });
+  return rpc('equip', {
+    p_avatar: avatar ?? null,
+    p_colour: colour ?? null,
+    p_theme:  theme  ?? null,
+    p_clear_colour: !!clearColour,
+    p_clear_theme:  !!clearTheme
+  });
+}
+
+/* -------------------------------------------------------------------------
    Feedback
    ------------------------------------------------------------------------- */
 

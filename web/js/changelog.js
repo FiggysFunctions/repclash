@@ -11,6 +11,23 @@
 
 export const CHANGELOG = [
   {
+    version: '1.3.0',
+    date: '2026-08-08',
+    title: 'The Season Pass',
+    blurb: '30 tiers of stuff to unlock, just for turning up.',
+    items: [
+      ['new',  'Season Pass. 30 tiers, earned with XP, running alongside the season. Your progress is the card at the top of the Me tab — tap it for the full ladder.'],
+      ['new',  'XP: +100 for any day you train, +150 for hitting your weekly target, +250 for winning a weekly challenge.'],
+      ['new',  'Unlocks: 20 new avatars, 3 name colours that show on the leaderboard and feed, 2 full app themes (Blood at tier 13, Terminal at tier 25), and 4 titles.'],
+      ['new',  'Your tier shows as a small gold number next to your name on the leaderboard.'],
+      ['note', 'The pass is NOT the leaderboard. XP is capped at one lot per day, so a four-hour Sunday earns the same as a solid Tuesday. Whoever\'s topping the table does not automatically win the pass — turning up regularly does.'],
+      ['note', 'Everything you unlock is permanent. Season 2 will reset your tier, not your rewards.'],
+      ['note', 'Joined recently? You\'re credited 400 XP for every week of the season that had already gone before you joined, so nobody starts already beaten.'],
+      ['better', 'Avatars now live under Me → ⚙️ → Avatar, colours and themes. You start with 8; the other 20 are pass rewards.'],
+      ['note', 'Nothing in the pass affects scoring. It\'s all cosmetic, on purpose — otherwise whoever started first would win forever.']
+    ]
+  },
+  {
     version: '1.2.0',
     date: '2026-08-08',
     title: 'The Feed',

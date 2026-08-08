@@ -10,13 +10,15 @@ import * as api from '../api.js';
 import {
   $, esc, num, relDay, fmtDate, plural, live, sheet, toastOk, toastBad, confirmSheet
 } from '../ui.js';
+import { name } from './pass.js';
 
 const PAGE = 20;
 
 let rows = [];
 let exhausted = false;
 let loading = false;
-let filterUser = null;   // null = the whole crew
+let filterUser = null;         // null = the whole crew
+let colours = new Map();       // user_id → equipped name colour
 
 export async function render(root, ctx) {
   rows = [];
@@ -50,9 +52,14 @@ async function loadMore(host, ctx, first = false) {
   loading = true;
   try {
     const before = first ? null : rows[rows.length - 1]?.created_at || null;
-    const page = await api.crewFeed(ctx.crew.id, {
-      limit: PAGE, before, userId: filterUser
-    });
+    const [page, pass] = await Promise.all([
+      api.crewFeed(ctx.crew.id, { limit: PAGE, before, userId: filterUser }),
+      // Only needed for name colours, and only worth fetching once.
+      first || !colours.size
+        ? api.crewPass(ctx.crew.id).catch(() => [])
+        : Promise.resolve(null)
+    ]);
+    if (pass) colours = new Map(pass.map(p => [p.user_id, p.colour]));
     if (!live(host)) return;
 
     if (page.length < PAGE) exhausted = true;
@@ -108,7 +115,7 @@ function postHtml(r) {
         <div class="row-av">${esc(r.avatar_emoji)}</div>
         <div class="row-main">
           <div class="row-name">
-            ${esc(r.display_name)}
+            ${name(r.display_name, colours.get(r.user_id))}
             ${r.is_private ? '<span class="lock" title="Only you can see this">🔒 Private</span>' : ''}
           </div>
           <div class="row-sub">${relDay(r.performed_on)} · ${plural(r.entries.length, 'exercise')}</div>

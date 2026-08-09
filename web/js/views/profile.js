@@ -249,6 +249,7 @@ function settingsSheet(ctx) {
     <button class="btn mt" data-edit>Change display name</button>
     ${demo ? '' : '<button class="btn mt" data-crews>Switch or join a crew</button>'}
     <button class="btn mt" data-install>How to install this app</button>
+    <button class="btn mt" data-forceupdate>🔄 Force update</button>
     ${demo ? `
       <button class="btn btn-primary mt" data-exit>Set up the real thing</button>
       <button class="btn btn-ghost mt" data-reset>Reset demo data</button>
@@ -296,6 +297,26 @@ function settingsSheet(ctx) {
   $('[data-look]', s.el).addEventListener('click', () => { s.close(); customise(ctx); });
   $('[data-crews]', s.el)?.addEventListener('click', () => { s.close(); ctx.goCrewSetup(); });
   $('[data-install]', s.el).addEventListener('click', () => { s.close(); installSheet(); });
+
+  /* Last resort if a phone is stubbornly holding on to old code. Throws away
+     every cached file and the service worker, then reloads from scratch.
+     Nothing you've logged lives in there, so there's nothing to lose. */
+  $('[data-forceupdate]', s.el).addEventListener('click', async () => {
+    const btn = $('[data-forceupdate]', s.el);
+    btn.disabled = true;
+    btn.textContent = 'Updating…';
+    try {
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(r => r.unregister()));
+      }
+      if (window.caches) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map(k => caches.delete(k)));
+      }
+    } catch { /* clear what we can, reload regardless */ }
+    location.reload();
+  });
 
   $('[data-leave]', s.el)?.addEventListener('click', async () => {
     const ok = await confirmSheet({

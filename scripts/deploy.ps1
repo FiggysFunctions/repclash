@@ -40,6 +40,23 @@ if ($sw -match "const CACHE = 'repclash-v(\d+)';") {
   Write-Warning "Could not find the CACHE constant in web/sw.js - skipping bump."
 }
 
+# --- 1b. Sanity check the file we just rewrote --------------------------------
+# A stray byte at the top of sw.js makes the service worker fail to evaluate,
+# which is silent: the app still loads, it just never updates itself again.
+# That shipped once. Never again.
+$swBytes = [System.IO.File]::ReadAllBytes($swPath)
+if ($swBytes[0] -ne 0x2F -or $swBytes[1] -ne 0x2A) {
+  $head = ($swBytes[0..3] | ForEach-Object { '{0:X2}' -f $_ }) -join ' '
+  throw "web/sw.js does not start with '/*' (first bytes: $head). Refusing to deploy a broken service worker."
+}
+$swText = [System.IO.File]::ReadAllText($swPath, [System.Text.Encoding]::UTF8)
+if ($swText -notmatch "const CACHE = 'repclash-v\d+';") {
+  throw "web/sw.js is missing its CACHE constant. Refusing to deploy."
+}
+if ($swText.Contains([char]0xFFFD)) {
+  throw "web/sw.js contains a replacement character - the encoding is damaged. Refusing to deploy."
+}
+
 # --- 2. Anything to ship? -----------------------------------------------------
 $changes = git status --porcelain
 if (-not $changes) {

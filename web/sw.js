@@ -1,4 +1,4 @@
-?/* ==========================================================================
+/* ==========================================================================
    Service worker — makes RepClash installable and usable with a bad signal.
 
    Strategy:
@@ -13,7 +13,7 @@
    evicts the old copies on everyone's phone.
    ========================================================================== */
 
-const CACHE = 'repclash-v8';
+const CACHE = 'repclash-v9';
 
 /* How long to wait for the network before falling back to cache. Long enough
    for a bad 4G signal, short enough that it never feels broken. */
@@ -73,13 +73,27 @@ async function keep(req, res) {
   return res;
 }
 
+/**
+ * Go to the actual network, not the browser's HTTP cache.
+ *
+ * GitHub Pages serves everything with Cache-Control: max-age=600, so a plain
+ * fetch() here was being answered from the HTTP cache — "network first" would
+ * hand back a ten-minute-old file and then store it as if it were fresh. A
+ * deploy could take that long to reach a phone, which defeats the point.
+ *
+ * Navigation requests are the exception: re-initialising a request whose mode
+ * is 'navigate' throws, so those go through untouched.
+ */
+const fresh = (req) =>
+  req.mode === 'navigate' ? fetch(req) : fetch(req, { cache: 'no-store' });
+
 /** Network, but never hang: if it's slow, serve the cached copy instead. */
 async function networkFirst(req) {
   const cached = await caches.match(req);
 
   try {
     const res = await Promise.race([
-      fetch(req).then(r => keep(req, r)),
+      fresh(req).then(r => keep(req, r)),
       new Promise((_, reject) =>
         setTimeout(() => reject(new Error('slow')), NET_TIMEOUT))
     ]);

@@ -216,9 +216,38 @@ window.addEventListener('unhandledrejection', (e) => {
   toastBad(msg);
 });
 
+/* -------------------------------------------------------------------------
+   Staying up to date
+
+   An installed PWA that's only backgrounded never re-runs any of this, so
+   without an explicit check a phone can sit on old code indefinitely. Three
+   things together fix that: don't let the HTTP cache answer for the worker
+   script, ask for an update every time the app comes back to the foreground,
+   and reload once when a new worker actually takes over.
+   ------------------------------------------------------------------------- */
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch(() => { /* offline mode is a bonus, not a requirement */ });
+  window.addEventListener('load', async () => {
+    let reg;
+    try {
+      reg = await navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' });
+    } catch {
+      return;   // offline support is a bonus, not a requirement
+    }
+
+    const check = () => { if (!document.hidden) reg.update().catch(() => {}); };
+    document.addEventListener('visibilitychange', check);
+    setInterval(check, 15 * 60 * 1000);
+
+    // On a first-ever install there's no controller yet and the page is
+    // already running the newest code — reloading then would be pointless.
+    const hadController = !!navigator.serviceWorker.controller;
+    let reloading = false;
+
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadController || reloading) return;
+      reloading = true;
+      location.reload();
+    });
   });
 }
 

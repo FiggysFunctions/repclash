@@ -11,6 +11,7 @@ import { activeCrew } from '../config.js';
 import { openWhatsNew } from './whatsnew.js';
 import { openSubmit, openMine, openInbox } from './feedback.js';
 import { progressCard, openPass, openCosmetics } from './pass.js';
+import { progressCardHtml, openProgress } from './progress.js';
 
 /* Badges are derived from stats rather than stored — that way adding a new
    one is a one-line change here and it applies retroactively to everyone. */
@@ -59,16 +60,19 @@ export async function render(root, ctx) {
 
   const body = $('#body', root);
   try {
-    const [stats, trophies, pass] = await Promise.all([
+    const [stats, trophies, pass, lifts, goals] = await Promise.all([
       api.memberStats(profile.id),
       api.trophyCase(crew.id),
-      api.myPass(crew.id).catch(() => null)   // pass SQL might not be run yet
+      api.myPass(crew.id).catch(() => null),      // pass SQL might not be run yet
+      api.exerciseSummary().catch(() => null),    // nor might the progression SQL
+      api.myGoals().catch(() => [])
     ]);
     if (!live(body)) return;          // a newer render already took over
     const myTitles = trophies.filter(t => t.user_id === profile.id);
 
     body.innerHTML = `
       ${pass ? progressCard(pass) : ''}
+      ${lifts ? progressCardHtml(lifts, goals) : ''}
 
       <div class="stats">
         <div class="stat"><div class="stat-n">${num(stats.total_points)}</div><div class="stat-l">Points</div></div>
@@ -121,6 +125,11 @@ export async function render(root, ctx) {
 
     $('#passcard', root)?.addEventListener('click', () =>
       openPass(ctx, pass, () => render(root, ctx)));
+
+    $('#lifts', root)?.addEventListener('click', async () => {
+      const catalog = await api.exercises();
+      openProgress(catalog, () => render(root, ctx));
+    });
 
     $('#rules', root).addEventListener('click', () => rulesSheet(ctx));
     $('#news', root).addEventListener('click', () => openWhatsNew());
@@ -292,7 +301,8 @@ function settingsSheet(ctx) {
     const ok = await confirmSheet({
       title: `Leave ${ctx.crew.name}?`,
       body: 'Your workouts stay, but you drop off this leaderboard. You can rejoin with the code.',
-      confirmLabel: 'Leave crew', danger: true
+      confirmLabel: 'Leave crew', danger: true,
+      back: () => settingsSheet(ctx)
     });
     if (!ok) return;
     try {
@@ -306,7 +316,8 @@ function settingsSheet(ctx) {
   $('[data-out]', s.el)?.addEventListener('click', async () => {
     const ok = await confirmSheet({
       title: 'Sign out?', body: 'You\'ll need your email and password to get back in.',
-      confirmLabel: 'Sign out', danger: true
+      confirmLabel: 'Sign out', danger: true,
+      back: () => settingsSheet(ctx)
     });
     if (!ok) return;
     await api.signOut();

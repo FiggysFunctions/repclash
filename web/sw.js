@@ -13,7 +13,7 @@
    evicts the old copies on everyone's phone.
    ========================================================================== */
 
-const CACHE = 'repclash-v6';
+const CACHE = 'repclash-v7';
 
 /* How long to wait for the network before falling back to cache. Long enough
    for a bad 4G signal, short enough that it never feels broken. */
@@ -29,10 +29,12 @@ const SHELL = [
   './js/config.js',
   './js/demo.js',
   './js/changelog.js',
+  './js/progression.js',
   './js/views/onboarding.js',
   './js/views/leaderboard.js',
   './js/views/feed.js',
   './js/views/pass.js',
+  './js/views/progress.js',
   './js/views/log.js',
   './js/views/challenges.js',
   './js/views/profile.js',

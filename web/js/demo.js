@@ -514,6 +514,121 @@ export async function crewFeed({ limit = 25, before = null, userId = null } = {}
 
 export async function seasonChampions() { return []; }
 
+/* --- personal progression -------------------------------------------------
+   Mirrors supabase/07_progression.sql. */
+
+const metricOf = (metric, e) => {
+  const sets = e.sets || 1, reps = e.reps || 0, w = Number(e.weight_kg) || 0;
+  switch (metric) {
+    case 'weight':       return w;
+    case 'reps':         return reps;
+    case 'e1rm':         return w * (1 + reps / 30);
+    case 'volume':       return sets * reps * w;
+    case 'distance_km':  return Number(e.distance_km) || 0;
+    case 'duration_min': return e.duration_min || 0;
+    default:             return 0;
+  }
+};
+
+/** Every entry you've logged for one exercise, newest first. */
+function myEntries(exerciseId = null) {
+  return load().workouts
+    .filter(w => w.user_id === 'demo-me')
+    .flatMap(w => w.entries
+      .filter(e => !exerciseId || e.exercise_id === exerciseId)
+      .map(e => ({ ...e, performed_on: w.performed_on })))
+    .sort((a, b) => b.performed_on.localeCompare(a.performed_on));
+}
+
+export async function exerciseSummary() {
+  const byEx = new Map();
+  for (const e of myEntries()) {
+    const cur = byEx.get(e.exercise_id) || { rows: [] };
+    cur.rows.push(e);
+    byEx.set(e.exercise_id, cur);
+  }
+  return [...byEx].map(([exercise_id, { rows }]) => {
+    const last = rows[0];                       // already newest-first
+    const max = (fn) => rows.reduce((m, e) => Math.max(m, fn(e)), 0);
+    const paces = rows
+      .filter(e => e.duration_min > 0 && e.distance_km > 0)
+      .map(e => e.duration_min / e.distance_km);
+    return {
+      exercise_id,
+      times_done: rows.length,
+      last_on: last.performed_on,
+      last_sets: last.sets, last_reps: last.reps,
+      last_weight: last.weight_kg, last_distance: last.distance_km,
+      last_duration: last.duration_min,
+      best_weight:   max(e => Number(e.weight_kg) || 0) || null,
+      best_reps:     max(e => e.reps || 0) || null,
+      best_e1rm:     Math.round(max(e => metricOf('e1rm', e)) * 10) / 10 || null,
+      best_volume:   max(e => metricOf('volume', e)) || null,
+      best_distance: max(e => Number(e.distance_km) || 0) || null,
+      best_duration: max(e => e.duration_min || 0) || null,
+      best_pace:     paces.length ? Math.round(Math.min(...paces) * 100) / 100 : null
+    };
+  });
+}
+
+export async function exerciseHistory(exerciseId, limit = 40) {
+  return myEntries(exerciseId).slice(0, limit).map(e => ({
+    performed_on: e.performed_on,
+    sets: e.sets, reps: e.reps,
+    weight_kg: e.weight_kg, distance_km: e.distance_km, duration_min: e.duration_min,
+    effort_points: e.effort_points,
+    e1rm: Math.round(metricOf('e1rm', e) * 10) / 10,
+    volume: metricOf('volume', e)
+  }));
+}
+
+function goalStore() {
+  const s = load();
+  s.goals ??= [];
+  return s;
+}
+
+export async function myGoals() {
+  const s = goalStore();
+  return s.goals.filter(g => !g.archived_at).map(g => {
+    const rows = myEntries(g.exercise_id);
+    const ex = EXERCISES.find(x => x.id === g.exercise_id);
+    const current = rows.reduce((m, e) => Math.max(m, metricOf(g.metric, e)), 0);
+    const hit = rows.filter(e => metricOf(g.metric, e) >= g.target)
+                    .map(e => e.performed_on).sort();
+    return {
+      ...g,
+      exercise_name: ex?.name || g.exercise_id,
+      exercise_emoji: ex?.emoji || '🏋️',
+      current,
+      achieved_on: hit[0] || null
+    };
+  }).sort((a, b) => (a.achieved_on ? 1 : 0) - (b.achieved_on ? 1 : 0));
+}
+
+export async function setGoal(exerciseId, metric, target, note) {
+  const s = goalStore();
+  const existing = s.goals.find(g =>
+    g.exercise_id === exerciseId && g.metric === metric && !g.archived_at);
+  if (existing) {
+    Object.assign(existing, { target: Number(target), note });
+  } else {
+    s.goals.push({
+      id: 'goal' + Date.now(), exercise_id: exerciseId, metric,
+      target: Number(target), note, created_at: new Date().toISOString(),
+      archived_at: null
+    });
+  }
+  save();
+}
+
+export async function dropGoal(id) {
+  const s = goalStore();
+  const g = s.goals.find(x => x.id === id);
+  if (g) g.archived_at = new Date().toISOString();
+  save();
+}
+
 /* --- season pass ---------------------------------------------------------
    Mirrors supabase/06_season_pass.sql. That file is the authority. */
 

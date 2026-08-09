@@ -74,6 +74,21 @@ Themes are pure CSS variable overrides under `:root[data-rc-theme="..."]`.
 `restoreTheme()` runs before `boot()` so there's no flash of the default while
 the profile loads.
 
+## Personal progression
+
+`07_progression.sql` is the private half of the app: history, personal bests
+and goals, all scoped to `auth.uid()` and shared with nobody. It must never
+feed scoring or the leaderboard — that separation is the whole point.
+
+`app.entry_metric()` is the single definition of what a metric is worth; both
+personal bests and goal progress read from it, so they can't disagree.
+`web/js/progression.js` mirrors it for the live PB flag while logging, the same
+deliberate exception as `previewEffort()`.
+
+Goal progress and the achieved date are **derived**, never stored. Delete a
+session and the goal correctly un-achieves; raise a target you'd already beaten
+and it goes back to in-progress.
+
 ## Privacy
 
 `workouts.is_private` hides a session's *detail* from the feed. It deliberately
@@ -129,8 +144,14 @@ Always capture the node before an await and guard with `live(node)` from
 responding to taps.
 
 `sheet()` replaces whatever sheet is open rather than stacking. Don't open a
-sheet from inside a sheet and then touch the outer one afterwards — close and
-reopen instead (see `replyTo` in `views/feedback.js`).
+sheet from inside a sheet and then touch the outer one afterwards — close the
+outer one first and pass a `back` callback that reopens it (see `replyTo` in
+`views/feedback.js` and `goalSheet` in `views/progress.js`). This has been
+introduced as a bug twice now; check for it whenever a sheet opens a sheet.
+
+`confirmSheet()` takes the same `back`, which it runs on cancel or dismiss —
+without it, backing out of a confirm leaves the user staring at the page behind
+instead of the sheet they came from.
 
 Element ids must be unique across the whole document, not just within a view:
 view containers and open sheets coexist in the DOM. Sheet-local ids are

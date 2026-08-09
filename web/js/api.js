@@ -373,6 +373,31 @@ export const challengeStandings = (challengeId) =>
             : rpc('challenge_standings', { p_challenge: challengeId });
 
 /* -------------------------------------------------------------------------
+   Personal progression — history, personal bests, goals.
+   All of this is yours only; nothing here is visible to the crew.
+   ------------------------------------------------------------------------- */
+
+export const exerciseSummary = () =>
+  demo.on() ? demo.exerciseSummary() : rpc('my_exercise_summary');
+
+export const exerciseHistory = (exerciseId, limit = 40) =>
+  demo.on() ? demo.exerciseHistory(exerciseId, limit)
+            : rpc('exercise_history', { p_exercise: exerciseId, p_limit: limit });
+
+export const myGoals = () =>
+  demo.on() ? demo.myGoals() : rpc('my_goals');
+
+export const setGoal = (exerciseId, metric, target, note = null) =>
+  demo.on() ? demo.setGoal(exerciseId, metric, target, note)
+            : rpc('set_goal', {
+                p_exercise: exerciseId, p_metric: metric,
+                p_target: target, p_note: note
+              });
+
+export const dropGoal = (id) =>
+  demo.on() ? demo.dropGoal(id) : rpc('drop_goal', { p_goal: id });
+
+/* -------------------------------------------------------------------------
    Season pass
    ------------------------------------------------------------------------- */
 

@@ -218,7 +218,8 @@ function openPost(id, ctx, host) {
     const ok = await confirmSheet({
       title: 'Delete session?',
       body: 'The points go with it. This can\'t be undone.',
-      confirmLabel: 'Delete', danger: true
+      confirmLabel: 'Delete', danger: true,
+      back: () => openPost(id, ctx, host)
     });
     if (!ok) return;
     try {

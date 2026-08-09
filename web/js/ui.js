@@ -99,19 +99,29 @@ export function sheet(html, { onClose } = {}) {
   return { el: $('.sheet', root), close };
 }
 
-/** A yes/no sheet. Resolves true if confirmed. */
-export function confirmSheet({ title, body, confirmLabel = 'Confirm', danger }) {
+/**
+ * A yes/no sheet. Resolves true if confirmed.
+ *
+ * `back` matters when you're confirming from inside another sheet: this one
+ * replaces it rather than stacking on top, so backing out would otherwise
+ * dump the user on the page behind. Pass a function that reopens the sheet
+ * they came from and it runs on cancel or dismiss. The confirmed path is left
+ * alone — callers almost always navigate somewhere themselves.
+ */
+export function confirmSheet({ title, body, confirmLabel = 'Confirm', danger, back }) {
   return new Promise(resolve => {
     let answered = false;
+    const cancel = () => { answered = true; s.close(); back?.(); resolve(false); };
+
     const s = sheet(`
       <h2>${esc(title)}</h2>
       <p class="sub">${esc(body)}</p>
       <button class="btn ${danger ? 'btn-danger' : 'btn-primary'}" data-yes>${esc(confirmLabel)}</button>
       <button class="btn btn-ghost mt" data-no>Cancel</button>
-    `, { onClose: () => { if (!answered) resolve(false); } });
+    `, { onClose: () => { if (!answered) { back?.(); resolve(false); } } });
 
     $('[data-yes]', s.el).addEventListener('click', () => { answered = true; s.close(); resolve(true); });
-    $('[data-no]',  s.el).addEventListener('click', () => { answered = true; s.close(); resolve(false); });
+    $('[data-no]',  s.el).addEventListener('click', cancel);
   });
 }
 

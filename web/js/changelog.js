@@ -11,6 +11,22 @@
 
 export const CHANGELOG = [
   {
+    version: '1.4.0',
+    date: '2026-08-09',
+    title: 'Beat last week',
+    blurb: 'The app now remembers what you lifted and tells you what to try next.',
+    items: [
+      ['new',  'Last time recall. Pick an exercise and it shows what you did last time — 3 × 5 @ 50 kg, two weeks ago — and fills the numbers in for you.'],
+      ['new',  'Suggestions. Tap a chip to go up: +2.5 kg, +1 rep, +5% distance. Small jumps on purpose, so you\'re still adding a year from now.'],
+      ['new',  'Personal bests, tracked automatically. Heaviest weight, best set, biggest volume, furthest, longest, best pace — and estimated 1 rep max for lifts, so a heavy triple can be compared with a light ten.'],
+      ['new',  'The app shouts 🏆 the moment your numbers would beat a PB, before you\'ve even saved.'],
+      ['new',  'Goals. Give yourself a target on any exercise — 100 kg bench, 20 pull-ups, a 10 km run — and watch the bar fill. It records the day you hit it.'],
+      ['new',  'Me → Your lifts has all of it: every exercise you\'ve done, your bests, full history and your goals.'],
+      ['better', 'The exercise picker opens on Recent, so the things you actually do are at the top.'],
+      ['note', 'All of this is private. Your bests, history and goals are yours alone — no one else in the crew can see them, and none of it affects points or the leaderboard.']
+    ]
+  },
+  {
     version: '1.3.0',
     date: '2026-08-08',
     title: 'The Season Pass',

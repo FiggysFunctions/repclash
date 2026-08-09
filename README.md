@@ -48,6 +48,7 @@ You need two free accounts. Neither ever asks for a card.
 5. Do the same with `supabase/04_feedback.sql`.
 6. Do the same with `supabase/05_feed_privacy.sql`.
 7. Do the same with `supabase/06_season_pass.sql`.
+8. Do the same with `supabase/07_progression.sql`.
 
 Order matters — run them in number order.
 
@@ -154,6 +155,39 @@ Seasons run 90 days. When one ends, the leader is crowned champion, gets a
 
 To change the challenges, edit the `challenge_templates` rows in
 `supabase/03_challenges.sql` and re-run it. Adding a row lengthens the rotation.
+
+## Personal progression
+
+The half of the app that isn't about your mates. **All of it is private** —
+your history, bests and goals are visible to you and nobody else, and none of
+it affects points or the leaderboard.
+
+**Last time recall.** Pick an exercise and it shows what you did last time and
+fills the numbers in. The picker opens on *Recent*, ordered by what you've done
+most recently.
+
+**Suggestions.** Tap a chip to progress: `+2.5 kg` (or `+1 kg` under 20 kg),
+`+1 rep`, `+5%` distance, `+5 min`. Deliberately small — the point is to still
+be adding next year.
+
+**Personal bests**, tracked automatically per exercise:
+
+| Kind | What's tracked |
+|---|---|
+| Strength | Heaviest weight, most reps in a set, biggest session volume, **estimated 1RM** |
+| Bodyweight | Most reps in a set |
+| Cardio (distance) | Furthest, longest, **best pace** |
+| Timed | Longest |
+
+Estimated 1RM uses the Epley formula (`weight × (1 + reps/30)`), which is how
+you compare a heavy triple against a light set of ten. The app flags 🏆 as soon
+as your numbers would beat a best, before you've saved.
+
+**Goals.** Set a target on any exercise and metric — 100 kg bench, 20 pull-ups,
+a 10 km run. Progress is worked out from your history rather than stored, so it
+stays correct if you delete a session, and the app records the day you hit it.
+
+Find it all under **Me → Your lifts**.
 
 ## The Season Pass
 
@@ -268,6 +302,7 @@ supabase/
   04_feedback.sql     the suggestion box
   05_feed_privacy.sql the workout feed and per-session privacy
   06_season_pass.sql  the season pass: XP, tiers, unlocks, cosmetics
+  07_progression.sql  personal bests, exercise history and goals
 web/
   index.html          the shell
   css/app.css         all the styling

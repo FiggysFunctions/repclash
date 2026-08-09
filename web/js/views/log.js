@@ -10,6 +10,10 @@ import {
   $, esc, num, toastOk, toastBad, todayISO, addDays, relDay, fmtDate,
   sheet, confirmSheet, plural, live
 } from '../ui.js';
+import {
+  describeLast, agoLabel, startingValues, suggestions, pbCheck, METRICS
+} from '../progression.js';
+import { openExercise } from './progress.js';
 
 const DRAFT_KEY = 'repclash.draft';
 
@@ -25,8 +29,9 @@ const draft = {
   clear()  { localStorage.removeItem(DRAFT_KEY); }
 };
 
-let d = null;      // the working draft
-let catalog = [];  // exercise list
+let d = null;        // the working draft
+let catalog = [];    // exercise list
+let summary = new Map();   // exercise_id → your history: last set + personal bests
 
 export async function render(root, ctx) {
   d = draft.read();
@@ -51,12 +56,21 @@ export async function render(root, ctx) {
 
   $('#pickdate', root).addEventListener('click', () => dateSheet(root, ctx));
 
+  const body = $('#body', root);
   try {
-    catalog = await api.exercises();
+    const [list, rows] = await Promise.all([
+      api.exercises(),
+      // Your own history. Nice-to-have: if 07_progression.sql hasn't been run
+      // the logger still works, just without last-time recall.
+      api.exerciseSummary().catch(() => [])
+    ]);
+    catalog = list;
+    summary = new Map(rows.map(r => [r.exercise_id, r]));
   } catch (e) {
-    $('#body', root).innerHTML = `<div class="err">${esc(e.message)}</div>`;
+    if (live(body)) body.innerHTML = `<div class="err">${esc(e.message)}</div>`;
     return;
   }
+  if (!live(body)) return;
 
   drawBody(root, ctx);
 }
@@ -93,7 +107,9 @@ function drawBody(root, ctx) {
         <div class="draft-item">
           <div style="font-size:1.3rem">${esc(e.emoji)}</div>
           <div class="draft-main">
-            <div class="draft-name">${esc(e.name)}</div>
+            <div class="draft-name">${esc(e.name)}
+              ${e.isPb ? '<span class="pb-dot" title="Personal best">🏆</span>' : ''}
+            </div>
             <div class="draft-detail">${esc(e.detail)}</div>
           </div>
           <div class="draft-pts">+${num(e.points)}</div>
@@ -203,8 +219,13 @@ function dateSheet(root, ctx) {
 
 function pickerSheet(root, ctx) {
   const cats = [...new Set(catalog.map(e => e.category))];
-  let cat = 'All';
+  let cat = summary.size ? 'Recent' : 'All';
   let q = '';
+
+  // Exercises you actually do, most recent first — usually what you want.
+  const recentIds = [...summary.values()]
+    .sort((a, b) => String(b.last_on).localeCompare(String(a.last_on)))
+    .map(r => r.exercise_id);
 
   const s = sheet(`
     <h2>Add exercise</h2>
@@ -212,8 +233,8 @@ function pickerSheet(root, ctx) {
       <input class="input" id="q" placeholder="Search…" autocapitalize="off" autocorrect="off">
     </div>
     <div class="cat-strip" id="cats">
-      ${['All', ...cats].map(c =>
-        `<button class="chip ${c === 'All' ? 'on' : ''}" data-c="${esc(c)}">${esc(c)}</button>`).join('')}
+      ${[...(summary.size ? ['Recent'] : []), 'All', ...cats].map(c =>
+        `<button class="chip ${c === cat ? 'on' : ''}" data-c="${esc(c)}">${esc(c)}</button>`).join('')}
     </div>
     <div class="ex-list" id="list"></div>
   `);
@@ -222,16 +243,29 @@ function pickerSheet(root, ctx) {
 
   const paint = () => {
     const needle = q.trim().toLowerCase();
-    const items = catalog.filter(e =>
-      (cat === 'All' || e.category === cat) &&
+    let items = catalog.filter(e =>
+      (cat === 'All' || cat === 'Recent' || e.category === cat) &&
       (!needle || e.name.toLowerCase().includes(needle)));
 
-    list.innerHTML = items.length ? items.map(e => `
+    if (cat === 'Recent' && !needle) {
+      const order = new Map(recentIds.map((id, i) => [id, i]));
+      items = items.filter(e => order.has(e.id))
+                   .sort((a, b) => order.get(a.id) - order.get(b.id));
+    }
+
+    list.innerHTML = items.length ? items.map(e => {
+      const s = summary.get(e.id);
+      const last = describeLast(e.kind, s);
+      return `
       <button class="ex" data-ex="${esc(e.id)}">
         <span class="ex-emoji">${esc(e.emoji)}</span>
-        <span class="ex-name">${esc(e.name)}</span>
+        <span class="ex-main">
+          <span class="ex-name">${esc(e.name)}</span>
+          ${last ? `<span class="ex-last">Last: ${esc(last)} · ${esc(agoLabel(s.last_on))}</span>` : ''}
+        </span>
         <span class="ex-kind">${kindLabel(e.kind)}</span>
-      </button>`).join('')
+      </button>`;
+    }).join('')
       : `<p class="hint center" style="padding:20px">Nothing matches "${esc(q)}".</p>`;
 
     list.querySelectorAll('[data-ex]').forEach(b =>
@@ -261,34 +295,41 @@ const kindLabel = (k) => ({
 }[k] || '');
 
 function entrySheet(ex, root, ctx) {
+  const hist  = summary.get(ex.id);
+  const start = startingValues(ex.kind, hist);
+  const chips = suggestions(ex.kind, hist);
+  const val   = (n) => (n == null ? '' : n);
+
   const fields = {
     strength: `
       <div class="num-grid">
         <div class="field"><label for="sets">Sets</label>
-          <input class="input" id="sets" type="number" inputmode="numeric" min="1" max="50" value="3"></div>
+          <input class="input" id="sets" type="number" inputmode="numeric" min="1" max="50" value="${val(start.sets ?? 3)}"></div>
         <div class="field"><label for="reps">Reps per set</label>
-          <input class="input" id="reps" type="number" inputmode="numeric" min="1" max="1000" value="10"></div>
+          <input class="input" id="reps" type="number" inputmode="numeric" min="1" max="1000" value="${val(start.reps ?? 10)}"></div>
       </div>
       <div class="field mt"><label for="weight">Weight (kg)</label>
-        <input class="input" id="weight" type="number" inputmode="decimal" min="0" max="700" step="0.5" value="20"></div>`,
+        <input class="input" id="weight" type="number" inputmode="decimal" min="0" max="700" step="0.5" value="${val(start.weightKg ?? 20)}"></div>`,
     bodyweight: `
       <div class="num-grid">
         <div class="field"><label for="sets">Sets</label>
-          <input class="input" id="sets" type="number" inputmode="numeric" min="1" max="50" value="3"></div>
+          <input class="input" id="sets" type="number" inputmode="numeric" min="1" max="50" value="${val(start.sets ?? 3)}"></div>
         <div class="field"><label for="reps">Reps per set</label>
-          <input class="input" id="reps" type="number" inputmode="numeric" min="1" max="1000" value="12"></div>
+          <input class="input" id="reps" type="number" inputmode="numeric" min="1" max="1000" value="${val(start.reps ?? 12)}"></div>
       </div>`,
     distance: `
       <div class="num-grid">
         <div class="field"><label for="dist">Distance (km)</label>
-          <input class="input" id="dist" type="number" inputmode="decimal" min="0" max="300" step="0.1" value="5"></div>
+          <input class="input" id="dist" type="number" inputmode="decimal" min="0" max="300" step="0.1" value="${val(start.distanceKm ?? 5)}"></div>
         <div class="field"><label for="dur">Minutes (optional)</label>
-          <input class="input" id="dur" type="number" inputmode="numeric" min="0" max="1440" placeholder="—"></div>
+          <input class="input" id="dur" type="number" inputmode="numeric" min="0" max="1440" placeholder="—" value="${val(start.durationMin)}"></div>
       </div>`,
     timed: `
       <div class="field"><label for="dur">Minutes</label>
-        <input class="input" id="dur" type="number" inputmode="numeric" min="1" max="1440" value="30"></div>`
+        <input class="input" id="dur" type="number" inputmode="numeric" min="1" max="1440" value="${val(start.durationMin ?? 30)}"></div>`
   }[ex.kind];
+
+  const lastLine = describeLast(ex.kind, hist);
 
   const s = sheet(`
     <div class="center" style="padding-bottom:6px">
@@ -296,7 +337,34 @@ function entrySheet(ex, root, ctx) {
       <h2 style="margin:6px 0 2px">${esc(ex.name)}</h2>
       <p class="sub" style="margin:0">${esc(ex.category)}</p>
     </div>
+
+    ${lastLine ? `
+      <div class="lasttime">
+        <div>
+          <div class="lasttime-l">Last time · ${esc(agoLabel(hist.last_on))}</div>
+          <div class="lasttime-v">${esc(lastLine)}</div>
+        </div>
+        <button class="btn btn-sm" data-hist>History</button>
+      </div>` : `
+      <p class="hint center" style="margin:0 0 14px">
+        First time logging this — we'll remember it for next time.
+      </p>`}
+
+    ${chips.length ? `
+      <div class="suggest">
+        <div class="suggest-l">Try this time</div>
+        <div class="suggest-row">
+          ${chips.map(c => `
+            <button class="sug" data-sug="${esc(c.id)}">
+              <b>${esc(c.label)}</b>
+              <span>${esc(c.hint)}</span>
+            </button>`).join('')}
+        </div>
+      </div>` : ''}
+
     ${fields}
+
+    <div id="pbflag"></div>
     <div class="preview"><b id="pts">0</b><span>points</span></div>
     <button class="btn btn-primary" data-add>Add to session</button>
   `);
@@ -309,11 +377,37 @@ function entrySheet(ex, root, ctx) {
     durationMin: numVal(s.el, '#dur')
   });
 
+  const write = (v) => {
+    const put = (sel, n) => { const el = $(sel, s.el); if (el && n != null) el.value = n; };
+    put('#sets', v.sets); put('#reps', v.reps); put('#weight', v.weightKg);
+    put('#dist', v.distanceKm); put('#dur', v.durationMin);
+  };
+
   const update = () => {
-    $('#pts', s.el).textContent = num(api.previewEffort(ex, read()));
+    const v = read();
+    $('#pts', s.el).textContent = num(api.previewEffort(ex, v));
+
+    const pbs = pbCheck(ex.kind, hist, v);
+    $('#pbflag', s.el).innerHTML = pbs.length
+      ? `<div class="pbflag">🏆 New PB — ${pbs.map(m => esc(METRICS[m].short.toLowerCase())).join(', ')}</div>`
+      : '';
   };
 
   s.el.querySelectorAll('input').forEach(i => i.addEventListener('input', update));
+
+  s.el.querySelectorAll('[data-sug]').forEach(b =>
+    b.addEventListener('click', () => {
+      const chip = chips.find(c => c.id === b.dataset.sug);
+      write(chip.values);
+      s.el.querySelectorAll('[data-sug]').forEach(x => x.classList.toggle('on', x === b));
+      update();
+    }));
+
+  $('[data-hist]', s.el)?.addEventListener('click', () => {
+    s.close();
+    openExercise(ex, hist, () => entrySheet(ex, root, ctx));
+  });
+
   update();
 
   $('[data-add]', s.el).addEventListener('click', () => {
@@ -323,16 +417,19 @@ function entrySheet(ex, root, ctx) {
       toastBad('Put some numbers in first.');
       return;
     }
+    const pbs = pbCheck(ex.kind, hist, v);
     d.entries.push({
       exerciseId: ex.id,
       name: ex.name,
       emoji: ex.emoji,
       detail: describe(ex, v),
       points,
+      isPb: pbs.length > 0,
       ...v
     });
     draft.write(d);
     s.close();
+    if (pbs.length) toastOk(`New PB on ${ex.name} 🏆`);
     drawBody(root, ctx);
   });
 }
@@ -469,7 +566,8 @@ function workoutSheet(w, root, ctx) {
     const ok = await confirmSheet({
       title: 'Delete session?',
       body: 'The points go with it. This can\'t be undone.',
-      confirmLabel: 'Delete', danger: true
+      confirmLabel: 'Delete', danger: true,
+      back: () => workoutSheet(w, root, ctx)
     });
     if (!ok) return;
     try {

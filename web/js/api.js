@@ -235,7 +235,12 @@ export async function updateProfile(patch) {
 
 export async function myCrews() {
   if (demo.on()) return demo.myCrews();
-  return rest('/crew_members?select=crew_id,joined_at,crews(*)&order=joined_at.asc');
+  // The user_id filter is load-bearing, not decoration. RLS lets you read
+  // every membership row of a crew you belong to, so without it a crew of
+  // seven comes back seven times over.
+  const uid = currentUser()?.id;
+  return rest(`/crew_members?user_id=eq.${uid}` +
+              `&select=crew_id,joined_at,crews(*)&order=joined_at.asc`);
 }
 
 export const createCrew = (name) =>

@@ -380,6 +380,45 @@ a { color: var(--ice); }
 }
 .sug span { display: block; font-size: .67rem; color: var(--text-faint); margin-top: 2px; }
 
+/* ---------- Set-by-set editor -------------------------------------------- */
+.setgrid-head {
+  display: grid; grid-template-columns: 30px 1fr 1fr 34px; gap: 8px;
+  padding: 0 2px 5px;
+  font-size: .66rem; font-weight: 800; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--text-faint);
+}
+.setgrid-head span:first-child { grid-column: 1; }
+
+.setrow {
+  display: grid; grid-template-columns: 30px 1fr 1fr 34px; gap: 8px;
+  align-items: center; margin-bottom: 7px;
+}
+/* No weight column for bodyweight work */
+.setrow-bw, .setgrid-head-bw { grid-template-columns: 30px 1fr 34px; }
+
+.setrow-n {
+  height: 34px; border-radius: 9px;
+  display: grid; place-content: center;
+  background: var(--bg-raise); border: 1px solid var(--line-soft);
+  font-size: .8rem; font-weight: 850; color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+.setrow-in {
+  padding: 8px 10px; font-size: .98rem; border-radius: 10px;
+  text-align: center; font-variant-numeric: tabular-nums;
+}
+.setrow-x {
+  width: 34px; height: 34px; border-radius: 9px;
+  background: var(--bg-raise); border: 1px solid var(--line-soft);
+  color: var(--text-faint); font-size: .85rem;
+  display: grid; place-content: center;
+  transition: color .15s, border-color .15s;
+}
+.setrow-x:active { color: var(--rose); border-color: rgba(255,77,109,.4); }
+.setrow-x:disabled { opacity: .3; pointer-events: none; }
+
+.setadd { width: 100%; margin-top: 2px; border-style: dashed; }
+
 .pbflag {
   padding: 10px 14px; margin-bottom: -4px;
   background: rgba(255,206,74,.13); border: 1px solid rgba(255,206,74,.3);

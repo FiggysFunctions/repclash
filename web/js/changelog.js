@@ -11,6 +11,22 @@
 
 export const CHANGELOG = [
   {
+    version: '1.6.0',
+    date: '2026-08-11',
+    title: 'Log it how you actually did it',
+    blurb: 'Every set gets its own line, and single-arm work finally counts properly.',
+    items: [
+      ['new',  'Sets are now individual. Three sets of 8 where the last one went to 10 is one entry: 8, 8, 10. No more logging the same exercise twice or writing down a number you didn\'t do.'],
+      ['new',  'Each set has its own weight too, so drop sets and pyramids log honestly. Every set is scored on the weight you actually used for it.'],
+      ['new',  '＋ Add set copies the set above, so the usual "same again" is one tap.'],
+      ['new',  'Single-arm and single-leg work. Exercises that are always one-sided — dumbbell row, Bulgarian split squat, concentration curl — switch it on themselves. Ones that could go either way, like curls, calf raises and lunges, have a toggle.'],
+      ['note', 'Doing both sides is worth double, because it is: the reps you enter count for each side.'],
+      ['better','Everything reads the way you\'d say it out loud — "8 · 8 · 10 @ 60 kg", "3 × 10 @ 20 kg each side", "4×9@27.5 · 13@22.5 kg" for a drop set.'],
+      ['better','"Most reps in a set" and "heaviest" now mean your best single set, which is what they always should have meant.'],
+      ['note', 'Everything you\'ve already logged is untouched and still shows exactly as before. Old entries just become "3 × 8" style sets.']
+    ]
+  },
+  {
     version: '1.5.0',
     date: '2026-08-11',
     title: 'The whole gym',

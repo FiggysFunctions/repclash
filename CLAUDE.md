@@ -100,10 +100,31 @@ the profile loads.
 and goals, all scoped to `auth.uid()` and shared with nobody. It must never
 feed scoring or the leaderboard — that separation is the whole point.
 
-`app.entry_metric()` is the single definition of what a metric is worth; both
+`app.metric_of()` is the single definition of what a metric is worth; both
 personal bests and goal progress read from it, so they can't disagree.
 `web/js/progression.js` mirrors it for the live PB flag while logging, the same
-deliberate exception as `previewEffort()`.
+deliberate exception as the points preview.
+
+## Sets and sides
+
+An entry holds `set_detail`: an array of `{reps, kg}`, one per set, so varied
+sets, drop sets and pyramids are one entry rather than several. Each set is
+priced on its own load and summed — never averaged.
+
+`per_side` means the reps entered were done on each side, and doubles the
+entry. Only meaningful for `strength` and `bodyweight`; the trigger forces it
+false otherwise. `exercises.sided` drives the toggle: `'always'` defaults on,
+`'option'` defaults off, null hides it.
+
+The flat `sets` / `reps` / `weight_kg` columns are **derived by the trigger**
+from `set_detail` — count, best single set's reps, heaviest single set. That's
+deliberate: it's exactly what "most reps in a set" and "heaviest" should mean
+for a personal best. Never write them from the client when set_detail is
+present. `total_reps`, `total_volume` and `top_e1rm` are denormalised at write
+time so PBs and goals stay simple queries.
+
+Old entries have `set_detail = null` and keep working through the same code
+paths; `fromEntry()` in `progression.js` expands them into the set shape.
 
 Goal progress and the achieved date are **derived**, never stored. Delete a
 session and the goal correctly un-achieves; raise a target you'd already beaten

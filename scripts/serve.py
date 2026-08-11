@@ -16,9 +16,11 @@ import sys
 
 try:                                     # Python 3
     from http.server import SimpleHTTPRequestHandler, HTTPServer
+    from socketserver import ThreadingMixIn
 except ImportError:                      # Python 2.7
     from SimpleHTTPServer import SimpleHTTPRequestHandler
     from BaseHTTPServer import HTTPServer
+    from SocketServer import ThreadingMixIn
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'web')
 
@@ -34,6 +36,14 @@ TYPES = {
     '.ico':  'image/x-icon',
     '.txt':  'text/plain; charset=utf-8',
 }
+
+
+class Server(ThreadingMixIn, HTTPServer):
+    """The app pulls ~20 ES modules at once. A single-threaded server makes
+    them queue, which is slow enough that the service worker's network timeout
+    starts firing and requests fail for no real reason."""
+    daemon_threads = True
+    allow_reuse_address = True
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -57,7 +67,7 @@ class Handler(SimpleHTTPRequestHandler):
 def main():
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8099
     os.chdir(ROOT)
-    server = HTTPServer(('127.0.0.1', port), Handler)
+    server = Server(('127.0.0.1', port), Handler)
     print("RepClash dev server")
     print("  serving %s" % os.getcwd())
     print("  http://localhost:%d" % port)

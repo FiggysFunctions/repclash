@@ -11,6 +11,7 @@ import {
   $, esc, num, relDay, fmtDate, plural, live, sheet, toastOk, toastBad, confirmSheet
 } from '../ui.js';
 import { name } from './pass.js';
+import { describeSets, fromEntry } from '../progression.js';
 
 const PAGE = 20;
 
@@ -137,18 +138,10 @@ function postHtml(r) {
     </div>`;
 }
 
-/** "5 × 5 · 100 kg" / "5.2 km" / "45 min" */
+/** "3 × 5 @ 100 kg" / "8 · 8 · 10 @ 60 kg each side" / "5.2 km" / "45 min" */
 export function detail(e) {
-  const bits = [];
-  if (e.sets && e.reps)      bits.push(`${e.sets} × ${e.reps}`);
-  else if (e.reps)           bits.push(`${e.reps} reps`);
-  if (e.weight_kg)           bits.push(`${trim(e.weight_kg)} kg`);
-  if (e.distance_km)         bits.push(`${trim(e.distance_km)} km`);
-  if (e.duration_min)        bits.push(`${e.duration_min} min`);
-  return bits.join(' · ');
+  return describeSets(e.kind, fromEntry(e));
 }
-
-const trim = (n) => String(Number(n)).replace(/\.0$/, '');
 
 /* ------------------------------------------------------------------------- */
 

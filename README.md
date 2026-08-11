@@ -49,6 +49,7 @@ You need two free accounts. Neither ever asks for a card.
 6. Do the same with `supabase/05_feed_privacy.sql`.
 7. Do the same with `supabase/06_season_pass.sql`.
 8. Do the same with `supabase/07_progression.sql`.
+9. Do the same with `supabase/08_sets_and_sides.sql`.
 
 Order matters — run them in number order.
 
@@ -162,9 +163,19 @@ The half of the app that isn't about your mates. **All of it is private** —
 your history, bests and goals are visible to you and nobody else, and none of
 it affects points or the leaderboard.
 
+**Every set is its own line.** Three sets of 8 where the last went to 10 is one
+entry — 8, 8, 10 — and each set can carry its own weight, so drop sets and
+pyramids log honestly. Each set is scored on the load you actually used for it.
+
+**Single-sided work.** Exercises that are always one-sided default the toggle
+on; ones that could go either way offer it. Turning it on means the reps you
+entered were done on each side, so the entry is worth double. Which exercises
+are which lives in the `sided` column, set at the bottom of
+`supabase/08_sets_and_sides.sql`.
+
 **Last time recall.** Pick an exercise and it shows what you did last time and
-fills the numbers in. The picker opens on *Recent*, ordered by what you've done
-most recently.
+fills the numbers in, set by set. The picker opens on *Recent*, ordered by what
+you've done most recently.
 
 **Suggestions.** Tap a chip to progress: `+2.5 kg` (or `+1 kg` under 20 kg),
 `+1 rep`, `+5%` distance, `+5 min`. Deliberately small — the point is to still
@@ -303,6 +314,7 @@ supabase/
   05_feed_privacy.sql the workout feed and per-session privacy
   06_season_pass.sql  the season pass: XP, tiers, unlocks, cosmetics
   07_progression.sql  personal bests, exercise history and goals
+  08_sets_and_sides.sql  per-set logging and single-sided work
 web/
   index.html          the shell
   css/app.css         all the styling

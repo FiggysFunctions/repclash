@@ -313,13 +313,18 @@ export async function saveWorkout({ performedOn, note, entries, isPrivate }) {
   try {
     await rest('/workout_entries', {
       method: 'POST',
+      // sets/reps/weight_kg are left for the database to fill in from
+      // set_detail — the trigger derives the best single set, which is what
+      // the personal-best columns are supposed to mean.
       body: entries.map(e => ({
         workout_id:   workout.id,
         user_id:      uid,
         exercise_id:  e.exerciseId,
-        sets:         e.sets ?? null,
-        reps:         e.reps ?? null,
-        weight_kg:    e.weightKg ?? null,
+        set_detail:   e.setDetail ?? null,
+        per_side:     !!e.perSide,
+        sets:         e.setDetail ? null : (e.sets ?? null),
+        reps:         e.setDetail ? null : (e.reps ?? null),
+        weight_kg:    e.setDetail ? null : (e.weightKg ?? null),
         distance_km:  e.distanceKm ?? null,
         duration_min: e.durationMin ?? null
       }))
@@ -450,27 +455,9 @@ export async function updateFeedback(id, patch) {
   await rest(`/feedback?id=eq.${id}`, { method: 'PATCH', body: patch });
 }
 
-/* Points preview for one entry, without a round trip. Mirrors the
-   entry_effort() function in the database — kept in sync by
-   supabase/01_schema.sql, which is the authority. */
-export function previewEffort(ex, v) {
-  if (!ex) return 0;
-  const ppu = Number(ex.points_per_unit);
-  switch (ex.kind) {
-    case 'strength': {
-      const units = (v.sets || 1) * (v.reps || 0);
-      const load  = Math.min(1 + (v.weightKg || 0) / 60, 3);
-      return Math.max(0, Math.round(ppu * units * load));
-    }
-    case 'bodyweight':
-      return Math.max(0, Math.round(ppu * (v.sets || 1) * (v.reps || 0)));
-    case 'distance':
-      return Math.max(0, Math.round(ppu * (v.distanceKm || 0)));
-    case 'timed':
-      return Math.max(0, Math.round(ppu * (v.durationMin || 0)));
-    default:
-      return 0;
-  }
-}
+/* Points preview for one entry, without a round trip. The maths lives in
+   progression.js, which mirrors app.fill_entry() in the database — that
+   trigger is the authority and recomputes on save regardless. */
+export { effortOf as previewEffort } from './progression.js';
 
 export { ApiError };

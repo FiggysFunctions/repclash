@@ -10,7 +10,8 @@ import {
   $, esc, num, sheet, confirmSheet, toastOk, toastBad, fmtDate, plural
 } from '../ui.js';
 import {
-  METRICS, metricsFor, bestOf, fmtMetric, fmtPace, describeLast, agoLabel
+  METRICS, metricsFor, bestOf, fmtMetric, fmtPace, describeLast, agoLabel,
+  describeSets, fromEntry
 } from '../progression.js';
 
 /* -------------------------------------------------------------------------
@@ -251,16 +252,7 @@ function bestsHtml(kind, r) {
     </div>`;
 }
 
-function histLine(kind, h) {
-  switch (kind) {
-    case 'strength':   return `${h.sets || 1} × ${h.reps || 0} @ ${Number(h.weight_kg || 0)} kg`;
-    case 'bodyweight': return `${h.sets || 1} × ${h.reps || 0} reps`;
-    case 'distance':   return `${Number(h.distance_km || 0)} km` +
-                              (h.duration_min ? ` · ${h.duration_min} min` : '');
-    case 'timed':      return `${h.duration_min || 0} min`;
-    default:           return '';
-  }
-}
+const histLine = (kind, h) => describeSets(kind, fromEntry(h));
 
 /* -------------------------------------------------------------------------
    Goals

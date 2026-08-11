@@ -11,7 +11,8 @@ import {
   sheet, confirmSheet, plural, live
 } from '../ui.js';
 import {
-  describeLast, agoLabel, startingValues, suggestions, pbCheck, METRICS
+  describeLast, agoLabel, startingValues, suggestions, pbCheck, METRICS,
+  describeSets, effortOf, isRepBased, fromEntry
 } from '../progression.js';
 import { openExercise } from './progress.js';
 
@@ -352,38 +353,17 @@ const kindLabel = (k) => ({
 
 function entrySheet(ex, root, ctx) {
   const hist  = summary.get(ex.id);
-  const start = startingValues(ex.kind, hist);
-  const chips = suggestions(ex.kind, hist);
+  const chips = suggestions(ex, hist);
+  const rep   = isRepBased(ex.kind);
   const val   = (n) => (n == null ? '' : n);
 
-  const fields = {
-    strength: `
-      <div class="num-grid">
-        <div class="field"><label for="sets">Sets</label>
-          <input class="input" id="sets" type="number" inputmode="numeric" min="1" max="50" value="${val(start.sets ?? 3)}"></div>
-        <div class="field"><label for="reps">Reps per set</label>
-          <input class="input" id="reps" type="number" inputmode="numeric" min="1" max="1000" value="${val(start.reps ?? 10)}"></div>
-      </div>
-      <div class="field mt"><label for="weight">Weight (kg)</label>
-        <input class="input" id="weight" type="number" inputmode="decimal" min="0" max="700" step="0.5" value="${val(start.weightKg ?? 20)}"></div>`,
-    bodyweight: `
-      <div class="num-grid">
-        <div class="field"><label for="sets">Sets</label>
-          <input class="input" id="sets" type="number" inputmode="numeric" min="1" max="50" value="${val(start.sets ?? 3)}"></div>
-        <div class="field"><label for="reps">Reps per set</label>
-          <input class="input" id="reps" type="number" inputmode="numeric" min="1" max="1000" value="${val(start.reps ?? 12)}"></div>
-      </div>`,
-    distance: `
-      <div class="num-grid">
-        <div class="field"><label for="dist">Distance (km)</label>
-          <input class="input" id="dist" type="number" inputmode="decimal" min="0" max="300" step="0.1" value="${val(start.distanceKm ?? 5)}"></div>
-        <div class="field"><label for="dur">Minutes (optional)</label>
-          <input class="input" id="dur" type="number" inputmode="numeric" min="0" max="1440" placeholder="—" value="${val(start.durationMin)}"></div>
-      </div>`,
-    timed: `
-      <div class="field"><label for="dur">Minutes</label>
-        <input class="input" id="dur" type="number" inputmode="numeric" min="1" max="1440" value="${val(start.durationMin ?? 30)}"></div>`
-  }[ex.kind];
+  // The live working copy. Set rows are edited in place rather than re-read
+  // from the DOM, so adding or removing one can't shuffle anyone's numbers.
+  let v = startingValues(ex, hist);
+
+  const sideLabel = ex.sided === 'always'
+    ? 'One side at a time'
+    : 'Did you do each side separately?';
 
   const lastLine = describeLast(ex.kind, hist);
 
@@ -418,30 +398,87 @@ function entrySheet(ex, root, ctx) {
         </div>
       </div>` : ''}
 
-    ${fields}
+    ${rep ? '<div id="setlist"></div>' : `
+      ${ex.kind === 'distance' ? `
+        <div class="num-grid">
+          <div class="field"><label for="dist">Distance (km)</label>
+            <input class="input" id="dist" type="number" inputmode="decimal" min="0" max="300" step="0.1" value="${val(v.distanceKm ?? 5)}"></div>
+          <div class="field"><label for="dur">Minutes (optional)</label>
+            <input class="input" id="dur" type="number" inputmode="numeric" min="0" max="1440" placeholder="—" value="${val(v.durationMin)}"></div>
+        </div>` : `
+        <div class="field"><label for="dur">Minutes</label>
+          <input class="input" id="dur" type="number" inputmode="numeric" min="1" max="1440" value="${val(v.durationMin ?? 30)}"></div>`}
+    `}
+
+    ${rep && ex.sided ? `
+      <div class="privacy-row" style="margin-top:12px">
+        <div>
+          <div class="privacy-t">${esc(sideLabel)}</div>
+          <div class="privacy-s">Counts the reps you enter for each side,
+            so it's worth double.</div>
+        </div>
+        <button class="switch ${v.perSide ? 'on' : ''}" id="side"
+                role="switch" aria-checked="${!!v.perSide}"
+                aria-label="${esc(sideLabel)}"><span></span></button>
+      </div>` : ''}
 
     <div id="pbflag"></div>
     <div class="preview"><b id="pts">0</b><span>points</span></div>
     <button class="btn btn-primary" data-add>Add to session</button>
   `);
 
-  const read = () => ({
-    sets:        numVal(s.el, '#sets'),
-    reps:        numVal(s.el, '#reps'),
-    weightKg:    numVal(s.el, '#weight'),
-    distanceKm:  numVal(s.el, '#dist'),
-    durationMin: numVal(s.el, '#dur')
-  });
+  /* --- the set-by-set editor ---------------------------------------------- */
+  const drawSets = () => {
+    const host = $('#setlist', s.el);
+    if (!host) return;
+    const loaded = ex.kind === 'strength';
 
-  const write = (v) => {
-    const put = (sel, n) => { const el = $(sel, s.el); if (el && n != null) el.value = n; };
-    put('#sets', v.sets); put('#reps', v.reps); put('#weight', v.weightKg);
-    put('#dist', v.distanceKm); put('#dur', v.durationMin);
+    host.innerHTML = `
+      <div class="setgrid-head ${loaded ? '' : 'setgrid-head-bw'}">
+        <span>Set</span><span>Reps</span>${loaded ? '<span>kg</span>' : ''}<span></span>
+      </div>
+      ${v.sets.map((set, i) => `
+        <div class="setrow ${loaded ? '' : 'setrow-bw'}">
+          <div class="setrow-n">${i + 1}</div>
+          <input class="input setrow-in" data-f="reps" data-i="${i}" type="number"
+                 inputmode="numeric" min="0" max="1000" value="${val(set.reps)}">
+          ${loaded ? `<input class="input setrow-in" data-f="kg" data-i="${i}" type="number"
+                 inputmode="decimal" min="0" max="700" step="0.5" value="${val(set.kg)}">` : ''}
+          <button class="setrow-x" data-rmset="${i}"
+                  aria-label="Remove set ${i + 1}" ${v.sets.length < 2 ? 'disabled' : ''}>✕</button>
+        </div>`).join('')}
+      <button class="btn btn-sm setadd" data-addset>＋ Add set</button>`;
+
+    host.querySelectorAll('[data-f]').forEach(inp =>
+      inp.addEventListener('input', () => {
+        const i = Number(inp.dataset.i);
+        v.sets[i][inp.dataset.f] = inp.value === '' ? 0 : Number(inp.value);
+        update();          // recalculates without redrawing, so focus is kept
+      }));
+
+    host.querySelectorAll('[data-rmset]').forEach(b =>
+      b.addEventListener('click', () => {
+        v.sets.splice(Number(b.dataset.rmset), 1);
+        drawSets(); update();
+      }));
+
+    // A new set copies the one above it — the usual case is "same again".
+    $('[data-addset]', host).addEventListener('click', () => {
+      const last = v.sets[v.sets.length - 1] || { reps: 10, kg: 0 };
+      v.sets.push({ ...last });
+      drawSets(); update();
+    });
+  };
+
+  const readSimple = () => {
+    if (rep) return;
+    v.distanceKm  = numVal(s.el, '#dist');
+    v.durationMin = numVal(s.el, '#dur');
   };
 
   const update = () => {
-    const v = read();
-    $('#pts', s.el).textContent = num(api.previewEffort(ex, v));
+    readSimple();
+    $('#pts', s.el).textContent = num(effortOf(ex, v));
 
     const pbs = pbCheck(ex.kind, hist, v);
     $('#pbflag', s.el).innerHTML = pbs.length
@@ -449,12 +486,28 @@ function entrySheet(ex, root, ctx) {
       : '';
   };
 
-  s.el.querySelectorAll('input').forEach(i => i.addEventListener('input', update));
+  if (rep) drawSets();
+  s.el.querySelectorAll('#dist, #dur').forEach(i => i.addEventListener('input', update));
+
+  $('#side', s.el)?.addEventListener('click', () => {
+    v.perSide = !v.perSide;
+    const btn = $('#side', s.el);
+    btn.classList.toggle('on', v.perSide);
+    btn.setAttribute('aria-checked', String(v.perSide));
+    update();
+  });
 
   s.el.querySelectorAll('[data-sug]').forEach(b =>
     b.addEventListener('click', () => {
       const chip = chips.find(c => c.id === b.dataset.sug);
-      write(chip.values);
+      // Keep the side toggle where the user left it; suggestions are about load.
+      v = { ...chip.values, sets: (chip.values.sets || []).map(x => ({ ...x })),
+            perSide: v.perSide };
+      if (rep) drawSets();
+      else {
+        const put = (sel, n) => { const el = $(sel, s.el); if (el && n != null) el.value = n; };
+        put('#dist', v.distanceKm); put('#dur', v.durationMin);
+      }
       s.el.querySelectorAll('[data-sug]').forEach(x => x.classList.toggle('on', x === b));
       update();
     }));
@@ -467,21 +520,28 @@ function entrySheet(ex, root, ctx) {
   update();
 
   $('[data-add]', s.el).addEventListener('click', () => {
-    const v = read();
-    const points = api.previewEffort(ex, v);
+    update();
+    if (rep) v.sets = v.sets.filter(x => Number(x.reps) > 0);
+
+    const points = effortOf(ex, v);
     if (points <= 0) {
       toastBad('Put some numbers in first.');
+      if (rep && !v.sets.length) { v.sets = [{ reps: 10, kg: 0 }]; drawSets(); }
       return;
     }
+
     const pbs = pbCheck(ex.kind, hist, v);
     d.entries.push({
       exerciseId: ex.id,
       name: ex.name,
       emoji: ex.emoji,
-      detail: describe(ex, v),
+      detail: describeSets(ex.kind, v),
       points,
       isPb: pbs.length > 0,
-      ...v
+      setDetail: rep ? v.sets.map(x => ({ reps: Number(x.reps), kg: Number(x.kg) || 0 })) : null,
+      perSide: !!v.perSide,
+      distanceKm: v.distanceKm ?? null,
+      durationMin: v.durationMin ?? null
     });
     draft.write(d);
     s.close();
@@ -495,20 +555,6 @@ function numVal(root, sel) {
   if (!el || el.value === '') return null;
   const n = Number(el.value);
   return Number.isFinite(n) ? n : null;
-}
-
-function describe(ex, v) {
-  switch (ex.kind) {
-    case 'strength':
-      return `${v.sets || 1} × ${v.reps || 0} @ ${v.weightKg || 0} kg`;
-    case 'bodyweight':
-      return `${v.sets || 1} × ${v.reps || 0} reps`;
-    case 'distance':
-      return `${v.distanceKm || 0} km${v.durationMin ? ` · ${v.durationMin} min` : ''}`;
-    case 'timed':
-      return `${v.durationMin || 0} min`;
-    default: return '';
-  }
 }
 
 /* ------------------------------------------------------------------------- */
@@ -587,6 +633,7 @@ function workoutSheet(w, root, ctx) {
         <div class="draft-pts">${num(e.effort_points)}</div>
       </div>`).join('')}
 
+
     <div class="privacy-row mt">
       <div>
         <div class="privacy-t">${w.is_private ? '🔒 Private' : '👀 Visible to the crew'}</div>
@@ -636,12 +683,17 @@ function workoutSheet(w, root, ctx) {
   });
 }
 
+/** A saved entry, read back the way it was performed. */
 function entryDetail(e) {
+  const kind = e.exercises?.kind;
+  if (kind) return describeSets(kind, fromEntry(e));
+
+  // The exercise wasn't embedded for some reason — fall back to the numbers.
   const bits = [];
   if (e.sets && e.reps) bits.push(`${e.sets} × ${e.reps}`);
   else if (e.reps) bits.push(`${e.reps} reps`);
   if (e.weight_kg) bits.push(`${e.weight_kg} kg`);
   if (e.distance_km) bits.push(`${e.distance_km} km`);
   if (e.duration_min) bits.push(`${e.duration_min} min`);
-  return bits.join(' · ');
+  return bits.join(' · ') + (e.per_side ? ' each side' : '');
 }

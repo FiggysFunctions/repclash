@@ -13,7 +13,7 @@
    evicts the old copies on everyone's phone.
    ========================================================================== */
 
-const CACHE = 'repclash-v10';
+const CACHE = 'repclash-v11';
 
 /* How long to wait for the network before falling back to cache. Long enough
    for a bad 4G signal, short enough that it never feels broken. */
@@ -90,13 +90,18 @@ const fresh = (req) =>
 /** Network, but never hang: if it's slow, serve the cached copy instead. */
 async function networkFirst(req) {
   const cached = await caches.match(req);
+  const live = fresh(req).then(r => keep(req, r));
 
   try {
-    const res = await Promise.race([
-      fresh(req).then(r => keep(req, r)),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('slow')), NET_TIMEOUT))
-    ]);
+    // Only race the clock when there's something to fall back to. With nothing
+    // cached, giving up early doesn't produce a faster page, it produces a
+    // broken one — better to wait for a slow network than fail outright.
+    const res = cached
+      ? await Promise.race([
+          live,
+          new Promise((_, reject) => setTimeout(() => reject(new Error('slow')), NET_TIMEOUT))
+        ])
+      : await live;
     return res;
   } catch {
     if (cached) return cached;

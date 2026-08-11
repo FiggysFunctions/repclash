@@ -27,6 +27,15 @@ const RULES = {
   weekly_bonus:      250
 };
 
+/* Which exercises are done one side at a time. Mirrors the `sided` column set
+   in supabase/08_sets_and_sides.sql. */
+const SIDED_ALWAYS = ['dumbbell-row', 'bulgarian-split-squat', 'concentration-curl'];
+const SIDED_OPTION = [
+  'bicep-curl', 'hammer-curl', 'cable-curl', 'lateral-raise', 'cable-lateral-raise',
+  'tricep-pushdown', 'leg-extension', 'leg-curl', 'standing-calf-raise', 'lunge',
+  'farmers-carry', 'hip-abduction', 'hip-adduction'
+];
+
 /* --- a slice of the real catalog ------------------------------------------
    Enough of each kind and each bit of kit that the picker's filters and search
    behave the same as they do against the real thing. */
@@ -101,7 +110,9 @@ const EXERCISES = [
   ['climbing','Climbing / Bouldering','Sport','timed',6.00,'🧗','Full body','Sport']
 ].map(([id, name, category, kind, ppu, emoji, muscle, equipment], i) => ({
   id, name, category, kind, points_per_unit: ppu, emoji,
-  muscle, equipment, sort_order: i, active: true
+  muscle, equipment, sort_order: i, active: true,
+  sided: SIDED_ALWAYS.includes(id) ? 'always'
+       : SIDED_OPTION.includes(id) ? 'option' : null
 }));
 
 /* --- the cast ------------------------------------------------------------ */
@@ -218,15 +229,30 @@ function shapeEntry(ex, rand, size) {
   const jitter = 0.7 + rand() * 0.6;
   switch (ex.kind) {
     case 'strength': {
-      const sets = 3 + Math.floor(rand() * 3);
-      const reps = 5 + Math.floor(rand() * 7);
+      const count  = 3 + Math.floor(rand() * 3);
+      const reps   = 5 + Math.floor(rand() * 7);
       const weight = Math.round((size / 6) * jitter / 2.5) * 2.5;
-      return { sets, reps, weight_kg: weight, distance_km: null, duration_min: null };
+      // Most sessions are uniform; some have a last set that went better, or a
+      // drop set — which is the whole point of per-set logging.
+      const shape = rand();
+      const set_detail = Array.from({ length: count }, (_, i) => {
+        if (shape < 0.2 && i === count - 1) return { reps: reps + 2, kg: weight };
+        if (shape > 0.9 && i === count - 1) return { reps: reps + 4, kg: weight - 5 };
+        return { reps, kg: weight };
+      });
+      return {
+        set_detail, per_side: ex.sided === 'always',
+        distance_km: null, duration_min: null
+      };
     }
     case 'bodyweight': {
-      const sets = 3 + Math.floor(rand() * 2);
-      const reps = 8 + Math.floor(rand() * 10);
-      return { sets, reps, weight_kg: null, distance_km: null, duration_min: null };
+      const count = 3 + Math.floor(rand() * 2);
+      const reps  = 8 + Math.floor(rand() * 10);
+      return {
+        set_detail: Array.from({ length: count }, () => ({ reps, kg: 0 })),
+        per_side: ex.sided === 'always',
+        distance_km: null, duration_min: null
+      };
     }
     case 'distance': {
       // Work backwards from a believable effort figure so we don't generate
@@ -234,14 +260,14 @@ function shapeEntry(ex, rand, size) {
       const target = 70 + rand() * 190;
       const km = Math.max(0.5, Math.min(30, target / ex.points_per_unit * jitter));
       return {
-        sets: null, reps: null, weight_kg: null,
+        set_detail: null, per_side: false,
         distance_km: Math.round(km * 10) / 10,
         duration_min: null
       };
     }
     default:
       return {
-        sets: null, reps: null, weight_kg: null, distance_km: null,
+        set_detail: null, per_side: false, distance_km: null,
         duration_min: Math.round((20 + rand() * 40) * jitter)
       };
   }
@@ -249,17 +275,23 @@ function shapeEntry(ex, rand, size) {
 
 function effort(ex, v) {
   const ppu = ex.points_per_unit;
-  switch (ex.kind) {
-    case 'strength':
-      return Math.round(ppu * (v.sets || 1) * (v.reps || 0) * Math.min(1 + (v.weight_kg || 0) / 60, 3));
-    case 'bodyweight':
-      return Math.round(ppu * (v.sets || 1) * (v.reps || 0));
-    case 'distance':
-      return Math.round(ppu * (v.distance_km || 0));
-    case 'timed':
-      return Math.round(ppu * (v.duration_min || 0));
-    default: return 0;
-  }
+  const mult = (v.per_side && (ex.kind === 'strength' || ex.kind === 'bodyweight')) ? 2 : 1;
+
+  if (ex.kind === 'distance') return Math.round(ppu * (v.distance_km || 0));
+  if (ex.kind === 'timed')    return Math.round(ppu * (v.duration_min || 0));
+
+  // Each set priced on its own load, matching app.fill_entry()
+  const sets = v.set_detail?.length
+    ? v.set_detail
+    : Array.from({ length: v.sets || 1 },
+                 () => ({ reps: v.reps || 0, kg: v.weight_kg || 0 }));
+
+  const total = sets.reduce((sum, s) => {
+    const r = Number(s.reps) || 0, w = Number(s.kg) || 0;
+    return sum + (ex.kind === 'strength' ? ppu * r * Math.min(1 + w / 60, 3) : ppu * r);
+  }, 0);
+
+  return Math.round(total * mult);
 }
 
 function seedTitles() {
@@ -472,13 +504,19 @@ export async function saveWorkout({ performedOn, note, entries, isPrivate }) {
     is_private: !!isPrivate,
     entries: entries.map(e => {
       const ex = EXERCISES.find(x => x.id === e.exerciseId);
-      const v = {
-        sets: e.sets ?? null, reps: e.reps ?? null,
-        weight_kg: e.weightKg ?? null,
+      const row = {
+        exercise_id: e.exerciseId,
+        set_detail: e.setDetail ?? null,
+        per_side: !!e.perSide,
         distance_km: e.distanceKm ?? null,
         duration_min: e.durationMin ?? null
       };
-      return { ...v, exercise_id: e.exerciseId, effort_points: effort(ex, v) };
+      const d = derive(row);
+      return {
+        ...row,
+        sets: d.sets, reps: d.reps, weight_kg: d.weight_kg,
+        effort_points: effort(ex, row)
+      };
     })
   };
   s.workouts.push(w);
@@ -536,10 +574,12 @@ export async function crewFeed({ limit = 25, before = null, userId = null } = {}
         is_private: !!w.is_private,
         entries: w.entries.map(e => {
           const ex = EXERCISES.find(x => x.id === e.exercise_id);
+          const d = derive(e);
           return {
             name: ex.name, emoji: ex.emoji, kind: ex.kind, category: ex.category,
-            sets: e.sets, reps: e.reps, weight_kg: e.weight_kg,
+            sets: d.sets, reps: d.reps, weight_kg: d.weight_kg,
             distance_km: e.distance_km, duration_min: e.duration_min,
+            set_detail: e.set_detail || null, per_side: !!e.per_side,
             points: e.effort_points
           };
         })
@@ -552,13 +592,38 @@ export async function seasonChampions() { return []; }
 /* --- personal progression -------------------------------------------------
    Mirrors supabase/07_progression.sql. */
 
-const metricOf = (metric, e) => {
+/* Derived the same way app.fill_entry() does, so varied sets and single-sided
+   work behave here exactly as they do against the real database. */
+function derive(e) {
+  const mult = e.per_side ? 2 : 1;
+  if (e.set_detail?.length) {
+    const reps = e.set_detail.map(s => Number(s.reps) || 0);
+    const kgs  = e.set_detail.map(s => Number(s.kg) || 0);
+    return {
+      sets: e.set_detail.length,
+      reps: Math.max(...reps, 0),
+      weight_kg: Math.max(...kgs, 0) || null,
+      total_volume: e.set_detail.reduce((t, s) =>
+        t + (Number(s.reps) || 0) * (Number(s.kg) || 0), 0) * mult,
+      top_e1rm: Math.max(...e.set_detail.map(s =>
+        (Number(s.kg) || 0) * (1 + (Number(s.reps) || 0) / 30)), 0)
+    };
+  }
   const sets = e.sets || 1, reps = e.reps || 0, w = Number(e.weight_kg) || 0;
+  return {
+    sets, reps, weight_kg: w || null,
+    total_volume: sets * reps * w * mult,
+    top_e1rm: w * (1 + reps / 30)
+  };
+}
+
+const metricOf = (metric, e) => {
+  const d = derive(e);
   switch (metric) {
-    case 'weight':       return w;
-    case 'reps':         return reps;
-    case 'e1rm':         return w * (1 + reps / 30);
-    case 'volume':       return sets * reps * w;
+    case 'weight':       return d.weight_kg || 0;
+    case 'reps':         return d.reps;
+    case 'e1rm':         return d.top_e1rm;
+    case 'volume':       return d.total_volume;
     case 'distance_km':  return Number(e.distance_km) || 0;
     case 'duration_min': return e.duration_min || 0;
     default:             return 0;
@@ -584,6 +649,7 @@ export async function exerciseSummary() {
   }
   return [...byEx].map(([exercise_id, { rows }]) => {
     const last = rows[0];                       // already newest-first
+    const lastD = derive(last);
     const max = (fn) => rows.reduce((m, e) => Math.max(m, fn(e)), 0);
     const paces = rows
       .filter(e => e.duration_min > 0 && e.distance_km > 0)
@@ -592,11 +658,13 @@ export async function exerciseSummary() {
       exercise_id,
       times_done: rows.length,
       last_on: last.performed_on,
-      last_sets: last.sets, last_reps: last.reps,
-      last_weight: last.weight_kg, last_distance: last.distance_km,
+      last_sets: lastD.sets, last_reps: lastD.reps,
+      last_weight: lastD.weight_kg, last_distance: last.distance_km,
       last_duration: last.duration_min,
-      best_weight:   max(e => Number(e.weight_kg) || 0) || null,
-      best_reps:     max(e => e.reps || 0) || null,
+      last_set_detail: last.set_detail || null,
+      last_per_side: !!last.per_side,
+      best_weight:   max(e => derive(e).weight_kg || 0) || null,
+      best_reps:     max(e => derive(e).reps || 0) || null,
       best_e1rm:     Math.round(max(e => metricOf('e1rm', e)) * 10) / 10 || null,
       best_volume:   max(e => metricOf('volume', e)) || null,
       best_distance: max(e => Number(e.distance_km) || 0) || null,
@@ -607,14 +675,18 @@ export async function exerciseSummary() {
 }
 
 export async function exerciseHistory(exerciseId, limit = 40) {
-  return myEntries(exerciseId).slice(0, limit).map(e => ({
-    performed_on: e.performed_on,
-    sets: e.sets, reps: e.reps,
-    weight_kg: e.weight_kg, distance_km: e.distance_km, duration_min: e.duration_min,
-    effort_points: e.effort_points,
-    e1rm: Math.round(metricOf('e1rm', e) * 10) / 10,
-    volume: metricOf('volume', e)
-  }));
+  return myEntries(exerciseId).slice(0, limit).map(e => {
+    const d = derive(e);
+    return {
+      performed_on: e.performed_on,
+      sets: d.sets, reps: d.reps, weight_kg: d.weight_kg,
+      distance_km: e.distance_km, duration_min: e.duration_min,
+      set_detail: e.set_detail || null, per_side: !!e.per_side,
+      effort_points: e.effort_points,
+      e1rm: Math.round(d.top_e1rm * 10) / 10,
+      volume: d.total_volume
+    };
+  });
 }
 
 function goalStore() {

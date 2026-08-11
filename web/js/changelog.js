@@ -11,6 +11,25 @@
 
 export const CHANGELOG = [
   {
+    version: '1.5.0',
+    date: '2026-08-11',
+    title: 'The whole gym',
+    blurb: '124 new exercises — the machines, cables and Smith machine rack you actually use.',
+    items: [
+      ['new',  'The catalog went from 83 exercises to 207. Every resistance machine you\'d expect: hack squat, hip abduction and adduction, lying and seated leg curl, pec deck, chest press, rear delt fly, glute kickback, ab crunch, assisted pull-up and dip.'],
+      ['new',  'The full cable station — fly crossover, tricep pushdown, overhead extension, face pull, cable curl, lateral raise, pull-through, cable crunch, woodchop, Pallof press.'],
+      ['new',  'Ten Smith machine movements: squat, split squat, RDL, bench, incline, shoulder press, row, shrug, hip thrust, calf raise.'],
+      ['new',  'More barbell and dumbbell work: sumo deadlift, rack pull, good morning, close-grip bench, push press, preacher curl, skullcrusher, Arnold press, hammer curl, Bulgarian split squat, goblet squat and plenty more.'],
+      ['new',  'Weighted core — weighted Russian twist, weighted sit-up, cable crunch — plus ab wheel, toes to bar, hanging knee raise, hollow hold, L-sit and dead hang.'],
+      ['new',  'Sled push and drag, battle ropes, farmer\'s carry, tyre flip, wall ball, Turkish get-up, assault bike and rucking.'],
+      ['better','The picker now has muscle-group filters under the categories, so you can jump straight to Chest or Glutes instead of scrolling past 200 things.'],
+      ['better','Search matches equipment and muscle, not just the name. Type "smith", "cable" or "glutes" and you\'ll find it.'],
+      ['better','Exercises you haven\'t done before now show what kit they need — "Machine · Glutes" — so the similar-sounding ones are easy to tell apart.'],
+      ['note', 'Nothing you\'ve already logged has changed value. Points are worked out and saved when you log a session, so your history and the leaderboard are exactly where you left them.'],
+      ['note', 'Machines score less per rep than free weights on purpose. You load a leg press with far more than you\'d ever squat, so if they paid the same per kilo the machines would win every time.']
+    ]
+  },
+  {
     version: '1.4.0',
     date: '2026-08-09',
     title: 'Beat last week',

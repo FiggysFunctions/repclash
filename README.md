@@ -278,7 +278,7 @@ Common tweaks:
 | You want to… | Edit |
 |---|---|
 | Retune the whole scoring system | `app.rules()` in `supabase/01_schema.sql`, re-run in SQL Editor |
-| Change what an exercise is worth | `supabase/02_exercises.sql`, re-run it |
+| Change what an exercise is worth | `supabase/02_exercises.sql`, re-run it (affects future logs only) |
 | Add an exercise | Add a row in `supabase/02_exercises.sql`, re-run it |
 | Change or add weekly challenges | `challenge_templates` in `supabase/03_challenges.sql`, re-run it |
 | Write patch notes for an update | Add an entry at the top of `web/js/changelog.js` |

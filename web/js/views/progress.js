@@ -381,20 +381,27 @@ function pickExerciseForGoal(catalog, summary, onChange) {
 
   const s = sheet(`
     <h2>Goal for which exercise?</h2>
-    <div class="field"><input class="input" id="gq" placeholder="Search…"
+    <div class="field"><input class="input" id="gq" placeholder="Search name, muscle or kit…"
            autocapitalize="off" autocorrect="off"></div>
     <div class="ex-list" id="glist"></div>
   `);
 
   const paint = () => {
     const needle = q.trim().toLowerCase();
-    const items = ordered.filter(e => !needle || e.name.toLowerCase().includes(needle));
-    $('#glist', s.el).innerHTML = items.slice(0, 60).map(e => `
+    const items = ordered.filter(e => !needle ||
+      `${e.name} ${e.muscle || ''} ${e.equipment || ''}`.toLowerCase().includes(needle));
+    $('#glist', s.el).innerHTML = items.slice(0, 60).map(e => {
+      const sub = [e.equipment, e.muscle].filter(Boolean).join(' · ');
+      return `
       <button class="ex" data-ex="${esc(e.id)}">
         <span class="ex-emoji">${esc(e.emoji)}</span>
-        <span class="ex-main"><span class="ex-name">${esc(e.name)}</span></span>
+        <span class="ex-main">
+          <span class="ex-name">${esc(e.name)}</span>
+          ${sub ? `<span class="ex-last">${esc(sub)}</span>` : ''}
+        </span>
         ${done.has(e.id) ? '<span class="ex-kind">logged</span>' : ''}
-      </button>`).join('');
+      </button>`;
+    }).join('');
 
     $('#glist', s.el).querySelectorAll('[data-ex]').forEach(b =>
       b.addEventListener('click', () => {

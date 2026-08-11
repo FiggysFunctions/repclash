@@ -28,6 +28,26 @@ the user is at, loads shared context once into a `ctx` object
 to a view. Views render by building an HTML string and wiring handlers — no
 virtual DOM, no reactivity.
 
+## The exercise catalog
+
+`02_exercises.sql` holds all 207 exercises and is re-run whenever it changes.
+Two rules:
+
+- **Never change or remove an `id` that has shipped.** `workout_entries` points
+  at it, so a rename would orphan people's history, personal bests and goals.
+  The `name` is free to change.
+- **Machines get a much lower `points_per_unit` than free weights.** The load
+  multiplier caps at 3× (120 kg), and people load a leg press with far more
+  than they'd ever squat. Equal rates would make machines strictly better.
+
+Changing `points_per_unit` does **not** rescore history: `app.fill_entry()`
+computes and stores `effort_points` at insert time, so a retune only affects
+future sessions.
+
+`muscle` and `equipment` exist purely so the picker can filter and search 200+
+items. Nothing scores off them. All weights work stays in `category = 'Strength'`
+regardless of equipment, because that's what the weekly challenges filter on.
+
 ## Where scoring lives
 
 **`app.rules()` at the top of `supabase/01_schema.sql` is the single source of

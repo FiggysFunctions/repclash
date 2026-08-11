@@ -318,6 +318,14 @@ a { color: var(--ice); }
 }
 .chip.on { background: var(--text); color: var(--bg); border-color: var(--text); }
 
+/* Second-level refine strip (muscle groups), only shown when the list is long */
+.cat-strip-sub { margin-top: -4px; }
+.cat-strip-sub[hidden] { display: none; }
+.chip-sm { padding: 6px 12px; font-size: .78rem; }
+.chip-sm.on {
+  background: var(--flame); color: #1a0d04; border-color: var(--flame);
+}
+
 .ex-list { display: grid; gap: 7px; }
 .ex {
   display: flex; align-items: center; gap: 11px; width: 100%;

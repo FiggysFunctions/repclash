@@ -217,9 +217,15 @@ function dateSheet(root, ctx) {
     }));
 }
 
+/* Roughly head-to-toe, so the refine strip reads in a sensible order rather
+   than alphabetically. Anything not listed falls in at the end. */
+const MUSCLE_ORDER = ['Chest', 'Back', 'Shoulders', 'Arms', 'Core',
+                      'Legs', 'Glutes', 'Full body', 'Cardio'];
+
 function pickerSheet(root, ctx) {
   const cats = [...new Set(catalog.map(e => e.category))];
   let cat = summary.size ? 'Recent' : 'All';
+  let muscle = 'All';
   let q = '';
 
   // Exercises you actually do, most recent first — usually what you want.
@@ -230,22 +236,63 @@ function pickerSheet(root, ctx) {
   const s = sheet(`
     <h2>Add exercise</h2>
     <div class="field" style="margin-bottom:10px">
-      <input class="input" id="q" placeholder="Search…" autocapitalize="off" autocorrect="off">
+      <input class="input" id="q" placeholder="Search name, muscle or kit…"
+             autocapitalize="off" autocorrect="off">
     </div>
     <div class="cat-strip" id="cats">
       ${[...(summary.size ? ['Recent'] : []), 'All', ...cats].map(c =>
         `<button class="chip ${c === cat ? 'on' : ''}" data-c="${esc(c)}">${esc(c)}</button>`).join('')}
     </div>
+    <div class="cat-strip cat-strip-sub" id="muscles"></div>
     <div class="ex-list" id="list"></div>
   `);
 
   const list = $('#list', s.el);
 
+  // Searching matches equipment and muscle too, so "smith", "cable" or
+  // "glutes" all find the right thing without knowing an exercise's name.
+  const haystack = (e) =>
+    `${e.name} ${e.muscle || ''} ${e.equipment || ''}`.toLowerCase();
+
+  const inCategory = (e) =>
+    cat === 'All' || cat === 'Recent' || e.category === cat;
+
+  /** Muscle chips for whatever the category filter currently allows. */
+  const paintMuscles = () => {
+    const host = $('#muscles', s.el);
+    const pool = catalog.filter(inCategory);
+    const present = [...new Set(pool.map(e => e.muscle).filter(Boolean))]
+      .sort((a, b) => {
+        const ia = MUSCLE_ORDER.indexOf(a), ib = MUSCLE_ORDER.indexOf(b);
+        return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+      });
+
+    // Only worth showing when there's actually too much to scroll.
+    if (pool.length < 18 || present.length < 3) {
+      host.innerHTML = '';
+      host.hidden = true;
+      muscle = 'All';
+      return;
+    }
+    host.hidden = false;
+    host.innerHTML = ['All', ...present].map(m =>
+      `<button class="chip chip-sm ${m === muscle ? 'on' : ''}" data-m="${esc(m)}">${esc(m)}</button>`
+    ).join('');
+
+    host.querySelectorAll('[data-m]').forEach(b =>
+      b.addEventListener('click', () => {
+        muscle = b.dataset.m;
+        host.querySelectorAll('[data-m]').forEach(x => x.classList.toggle('on', x === b));
+        paint();
+      }));
+  };
+
   const paint = () => {
     const needle = q.trim().toLowerCase();
     let items = catalog.filter(e =>
-      (cat === 'All' || cat === 'Recent' || e.category === cat) &&
-      (!needle || e.name.toLowerCase().includes(needle)));
+      inCategory(e) &&
+      (muscle === 'All' || e.muscle === muscle) &&
+      (!needle || haystack(e).includes(needle)));
 
     if (cat === 'Recent' && !needle) {
       const order = new Map(recentIds.map((id, i) => [id, i]));
@@ -256,12 +303,17 @@ function pickerSheet(root, ctx) {
     list.innerHTML = items.length ? items.map(e => {
       const s = summary.get(e.id);
       const last = describeLast(e.kind, s);
+      // Your own history if you have any, otherwise what kit it needs — with
+      // 200 exercises, "Machine · Glutes" is the thing that tells them apart.
+      const sub = last
+        ? `Last: ${last} · ${agoLabel(s.last_on)}`
+        : [e.equipment, e.muscle].filter(Boolean).join(' · ');
       return `
       <button class="ex" data-ex="${esc(e.id)}">
         <span class="ex-emoji">${esc(e.emoji)}</span>
         <span class="ex-main">
           <span class="ex-name">${esc(e.name)}</span>
-          ${last ? `<span class="ex-last">Last: ${esc(last)} · ${esc(agoLabel(s.last_on))}</span>` : ''}
+          ${sub ? `<span class="ex-last">${esc(sub)}</span>` : ''}
         </span>
         <span class="ex-kind">${kindLabel(e.kind)}</span>
       </button>`;
@@ -277,13 +329,17 @@ function pickerSheet(root, ctx) {
   };
 
   $('#q', s.el).addEventListener('input', e => { q = e.target.value; paint(); });
+
   s.el.querySelectorAll('[data-c]').forEach(b =>
     b.addEventListener('click', () => {
       cat = b.dataset.c;
+      muscle = 'All';   // a new category means the old muscle filter may not exist
       s.el.querySelectorAll('[data-c]').forEach(x => x.classList.toggle('on', x === b));
+      paintMuscles();
       paint();
     }));
 
+  paintMuscles();
   paint();
 }
 

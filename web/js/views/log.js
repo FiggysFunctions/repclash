@@ -435,15 +435,15 @@ function entrySheet(ex, root, ctx) {
 
     host.innerHTML = `
       <div class="setgrid-head ${loaded ? '' : 'setgrid-head-bw'}">
-        <span>Set</span><span>Reps</span>${loaded ? '<span>kg</span>' : ''}<span></span>
+        <span>Set</span>${loaded ? '<span>kg</span>' : ''}<span>Reps</span><span></span>
       </div>
       ${v.sets.map((set, i) => `
         <div class="setrow ${loaded ? '' : 'setrow-bw'}">
           <div class="setrow-n">${i + 1}</div>
-          <input class="input setrow-in" data-f="reps" data-i="${i}" type="number"
-                 inputmode="numeric" min="0" max="1000" value="${val(set.reps)}">
           ${loaded ? `<input class="input setrow-in" data-f="kg" data-i="${i}" type="number"
                  inputmode="decimal" min="0" max="700" step="0.5" value="${val(set.kg)}">` : ''}
+          <input class="input setrow-in" data-f="reps" data-i="${i}" type="number"
+                 inputmode="numeric" min="0" max="1000" value="${val(set.reps)}">
           <button class="setrow-x" data-rmset="${i}"
                   aria-label="Remove set ${i + 1}" ${v.sets.length < 2 ? 'disabled' : ''}>✕</button>
         </div>`).join('')}

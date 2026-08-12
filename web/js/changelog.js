@@ -11,6 +11,22 @@
 
 export const CHANGELOG = [
   {
+    version: '1.7.0',
+    date: '2026-08-11',
+    title: 'Big lifts, big points',
+    blurb: 'Curls no longer outscore bench. Someone flagged it, they were right.',
+    items: [
+      ['note', 'SCORING HAS CHANGED. Isolation work is worth a lot less than it was, and compound lifts are untouched. Squats, deadlifts, bench, presses, rows and Olympic lifts score exactly what they always did.'],
+      ['better','Curls, extensions, flies, pushdowns, lateral raises and the like are down roughly 45–55%. A set of machine curls used to be worth more than a set of bench, which was daft.'],
+      ['better','Machine compounds — leg press, hack squat, pulldown, chest press — are down around 35%. They take far heavier loads than a barbell and the old rates didn\'t account for that.'],
+      ['better','Small stuff — calves, hip abduction and adduction, shrugs — down more still. They\'re accessories, they should feel like accessories.'],
+      ['note', 'Nothing already logged has changed. Your points, streak, standings and the season pass are all exactly where they were — points are locked in when you save a session. This only affects sessions from now on.'],
+      ['note', 'Expect a typical lifting session to score maybe 20–25% lower than before. An arms-only day drops more like 45%. Everything still clears the 60 points needed for the day to count.'],
+      ['better','Sets are now entered as kg then reps, not reps then kg, matching how programs are written. Everything reads that way too: "60 kg × 8 · 8 · 10", "40 kg × 12 · 50 kg × 10 · 60 kg × 8".'],
+      ['new',  'Meadows Row added, set up as single-sided.']
+    ]
+  },
+  {
     version: '1.6.0',
     date: '2026-08-11',
     title: 'Log it how you actually did it',

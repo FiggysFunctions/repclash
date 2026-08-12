@@ -348,7 +348,7 @@ update public.exercises set sided = 'always' where id in (
   'dumbbell-row','cable-row-single','single-leg-press','concentration-curl',
   'bulgarian-split-squat','step-up','pistol-squat','turkish-get-up',
   'dumbbell-kickback','cable-kickback','glute-kickback-machine',
-  'smith-split-squat','landmine-press'
+  'smith-split-squat','landmine-press','meadows-row'
 );
 
 update public.exercises set sided = 'option' where id in (

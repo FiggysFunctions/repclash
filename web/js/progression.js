@@ -98,9 +98,13 @@ export const fmtPace = (minPerKm) => {
    ------------------------------------------------------------------------- */
 
 /**
- * "3 × 8 @ 60 kg"          — everything the same
- * "8 · 8 · 10 @ 60 kg"     — reps vary, weight doesn't
- * "4×9@27.5 · 13@22.5 kg"  — both vary; identical sets in a row are collapsed
+ * Weight first, then reps — the way programs are written and the way the set
+ * grid is laid out.
+ *
+ * "3 sets · 60 kg × 8"                  — everything the same
+ * "60 kg × 8 · 8 · 10"                  — reps vary, weight doesn't
+ * "27.5 kg × 9 (×4) · 22.5 kg × 13"     — both vary; runs are collapsed
+ * "3 × 12 reps"                         — bodyweight
  * plus " each side" when it was one arm or leg at a time
  */
 export function describeSets(kind, v) {
@@ -120,15 +124,18 @@ export function describeSets(kind, v) {
   const sameKg   = kgs.every(k => k === kgs[0]);
   const loaded   = kgs.some(k => k > 0);
 
+  if (!loaded) {
+    return (sameReps ? `${sets.length} × ${reps[0]}` : reps.join(' · ')) + ' reps' + side;
+  }
   if (sameReps && sameKg) {
-    return `${sets.length} × ${reps[0]}` + (loaded ? ` @ ${tidy(kgs[0])} kg` : ' reps') + side;
+    return `${sets.length} sets · ${tidy(kgs[0])} kg × ${reps[0]}` + side;
   }
   if (sameKg) {
-    return reps.join(' · ') + (loaded ? ` @ ${tidy(kgs[0])} kg` : ' reps') + side;
+    return `${tidy(kgs[0])} kg × ` + reps.join(' · ') + side;
   }
 
   // Both vary. Collapse runs of identical sets so a drop set reads as
-  // "4×9@27.5 · 13@22.5" rather than spelling out all five.
+  // "27.5 kg × 9 (×4) · 22.5 kg × 13" rather than spelling out all five.
   const runs = [];
   for (const s of sets) {
     const prev = runs[runs.length - 1];
@@ -136,8 +143,8 @@ export function describeSets(kind, v) {
     else runs.push({ reps: n(s.reps), kg: n(s.kg), count: 1 });
   }
   return runs
-    .map(r => (r.count > 1 ? `${r.count}×${r.reps}` : `${r.reps}`) + `@${tidy(r.kg)}`)
-    .join(' · ') + ' kg' + side;
+    .map(r => `${tidy(r.kg)} kg × ${r.reps}` + (r.count > 1 ? ` (×${r.count})` : ''))
+    .join(' · ') + side;
 }
 
 /** Turn a stored entry (snake_case, from the database) into the working shape. */

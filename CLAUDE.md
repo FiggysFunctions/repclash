@@ -40,9 +40,29 @@ Two rules:
   multiplier caps at 3× (120 kg), and people load a leg press with far more
   than they'd ever squat. Equal rates would make machines strictly better.
 
+**`09_scoring_rates.sql` owns `points_per_unit`, not `02`.** 02 is the catalog
+(what exists, how it's measured); 09 is the pricing. 02's `ON CONFLICT` clause
+deliberately excludes the rate so adding an exercise can't undo a rebalance.
+
+Rates sit in explicit bands, and this ordering is the product requirement — a
+crew member reported machine curls outscoring bench, and barbell curls did too:
+
+| Band | Rate | |
+|---|---|---|
+| Heavy compound | 1.00–1.50 | barbell, multi-joint, systemic |
+| Compound | 0.70–1.00 | dumbbell, unilateral, supported |
+| Machine compound | 0.40–0.70 | fixed path, much heavier loads |
+| Isolation | 0.25–0.40 | single joint, any equipment |
+| Small isolation | 0.12–0.25 | calves, delts, abductors |
+
+The underlying cause is structural: effort is linear in reps while the load
+multiplier only spans 1×–3×, so high-rep light work out-accumulates heavy work
+unless the rates are far apart. Keep new exercises inside these bands.
+
 Changing `points_per_unit` does **not** rescore history: `app.fill_entry()`
 computes and stores `effort_points` at insert time, so a retune only affects
-future sessions.
+future sessions. `app.rules()` is different — those are applied by views at
+read time, so changing *those* does move historical standings.
 
 `muscle` and `equipment` exist purely so the picker can filter and search 200+
 items. Nothing scores off them. All weights work stays in `category = 'Strength'`

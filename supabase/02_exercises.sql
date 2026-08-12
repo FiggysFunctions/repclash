@@ -51,6 +51,7 @@ insert into public.exercises
   ('barbell-row',       'Barbell Row',             'Strength','strength',1.05,'🏋️', 25,'Back','Barbell'),
   ('pendlay-row',       'Pendlay Row',             'Strength','strength',1.05,'🏋️', 26,'Back','Barbell'),
   ('t-bar-row',         'T-Bar Row',               'Strength','strength',1.00,'🏋️', 27,'Back','Barbell'),
+  ('meadows-row',       'Meadows Row',             'Strength','strength',0.85,'🏋️', 27,'Back','Barbell'),
   ('landmine-press',    'Landmine Press',          'Strength','strength',0.90,'🏋️', 28,'Shoulders','Barbell'),
   ('upright-row',       'Upright Row',             'Strength','strength',0.65,'🏋️', 29,'Shoulders','Barbell'),
   ('barbell-shrug',     'Barbell Shrug',           'Strength','strength',0.50,'🏋️', 30,'Back','Barbell'),
@@ -288,9 +289,13 @@ on conflict (id) do update set
   name            = excluded.name,
   category        = excluded.category,
   kind            = excluded.kind,
-  points_per_unit = excluded.points_per_unit,
   emoji           = excluded.emoji,
   sort_order      = excluded.sort_order,
   muscle          = excluded.muscle,
   equipment       = excluded.equipment,
   active          = true;
+  -- points_per_unit is deliberately NOT updated here. This file is the
+  -- catalog: what exercises exist and how they're measured. What they're
+  -- worth lives in 09_scoring_rates.sql, so re-running this to add an
+  -- exercise can never quietly undo a scoring rebalance. The value in the
+  -- INSERT above only applies to genuinely new rows.

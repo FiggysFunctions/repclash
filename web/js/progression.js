@@ -24,6 +24,20 @@ export const sideMult = (v) => (v.perSide ? 2 : 1);
 
 export const isRepBased = (kind) => kind === 'strength' || kind === 'bodyweight';
 
+/* How load and reps turn into effort. Mirrors app.eff_reps() and
+   app.fill_entry() in supabase/11_scoring_curve.sql. */
+const LOAD_DIVISOR = 45;   // steeper than it was, so heavy work counts
+const LOAD_CAP     = 4;    // reached at 135 kg
+const REP_FULL     = 15;   // reps past here count half — endurance, not strength
+const REP_TAPER    = 0.5;
+
+export const loadFactor = (kg) => Math.min(1 + n(kg) / LOAD_DIVISOR, LOAD_CAP);
+
+export const effReps = (reps) => {
+  const r = n(reps);
+  return r <= REP_FULL ? r : REP_FULL + (r - REP_FULL) * REP_TAPER;
+};
+
 /* -------------------------------------------------------------------------
    Effort — each set priced on its own load, then summed.
    ------------------------------------------------------------------------- */
@@ -35,9 +49,9 @@ export function effortOf(ex, v) {
   if (ex.kind === 'timed')    return Math.max(0, Math.round(ppu * n(v.durationMin)));
 
   const total = (v.sets || []).reduce((sum, s) => {
-    const r = n(s.reps), w = n(s.kg);
+    const r = effReps(s.reps);
     return sum + (ex.kind === 'strength'
-      ? ppu * r * Math.min(1 + w / 60, 3)
+      ? ppu * r * loadFactor(s.kg)
       : ppu * r);
   }, 0);
 

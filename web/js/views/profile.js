@@ -247,6 +247,7 @@ function settingsSheet(ctx) {
 
     <button class="btn" data-look>🎨 Avatar, colours and themes</button>
     <button class="btn mt" data-edit>Change display name</button>
+    ${demo ? '' : '<button class="btn mt" data-pw>Change password</button>'}
     ${demo ? '' : '<button class="btn mt" data-crews>Switch or join a crew</button>'}
     <button class="btn mt" data-install>How to install this app</button>
     <button class="btn mt" data-forceupdate>🔄 Force update</button>
@@ -295,6 +296,7 @@ function settingsSheet(ctx) {
 
   $('[data-edit]', s.el).addEventListener('click', () => { s.close(); editSheet(ctx); });
   $('[data-look]', s.el).addEventListener('click', () => { s.close(); customise(ctx); });
+  $('[data-pw]', s.el)?.addEventListener('click', () => { s.close(); passwordSheet(ctx); });
   $('[data-crews]', s.el)?.addEventListener('click', () => { s.close(); ctx.goCrewSetup(); });
   $('[data-install]', s.el).addEventListener('click', () => { s.close(); installSheet(); });
 
@@ -378,6 +380,49 @@ function editSheet(ctx) {
       ctx.reload();
     } catch (e) {
       toastBad(e.message);
+      btn.disabled = false;
+      btn.textContent = 'Save';
+    }
+  });
+}
+
+function passwordSheet(ctx) {
+  const s = sheet(`
+    <h2>Change password</h2>
+    <p class="sub">You'll stay signed in on this device.</p>
+    <div id="cp-err"></div>
+    <div class="field">
+      <label for="cp1">New password</label>
+      <input class="input" id="cp1" type="password" autocomplete="new-password"
+             placeholder="At least 6 characters">
+    </div>
+    <div class="field">
+      <label for="cp2">Again, to be sure</label>
+      <input class="input" id="cp2" type="password" autocomplete="new-password">
+    </div>
+    <button class="btn btn-primary" data-save>Save</button>
+    <button class="btn btn-ghost mt" data-back>Back</button>
+  `);
+
+  $('[data-back]', s.el).addEventListener('click', () => { s.close(); settingsSheet(ctx); });
+
+  $('[data-save]', s.el).addEventListener('click', async () => {
+    const btn = $('[data-save]', s.el);
+    const a = $('#cp1', s.el).value, b = $('#cp2', s.el).value;
+    const err = $('#cp-err', s.el);
+    err.innerHTML = '';
+
+    if (a.length < 6) return err.innerHTML = '<div class="err">Six characters or more, please.</div>';
+    if (a !== b)      return err.innerHTML = '<div class="err">Those two don\'t match.</div>';
+
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+    try {
+      await api.changePassword(a);
+      s.close();
+      toastOk('Password changed');
+    } catch (e) {
+      err.innerHTML = `<div class="err">${esc(e.message)}</div>`;
       btn.disabled = false;
       btn.textContent = 'Save';
     }

@@ -11,6 +11,22 @@
 
 export const CHANGELOG = [
   {
+    version: '1.8.0',
+    date: '2026-08-12',
+    title: 'Heavy counts for more',
+    blurb: 'Strength work was losing to volume work. Fixed at the root this time.',
+    items: [
+      ['note', 'SCORING HAS CHANGED AGAIN, and this one favours the big lifts. Squats, deadlifts, bench and presses are worth 20–25% more than they were. Machines and isolation stay roughly where v1.7 put them.'],
+      ['better','The reason: the old load multiplier maxed out at 120 kg and only ever spanned 1× to 3×, so going 60 kg → 100 kg bought 33% more per rep while doing 10 reps instead of 5 bought 100%. Volume beat intensity no matter what. It now runs to 4× and doesn\'t cap until 135 kg.'],
+      ['better','Reps past 15 in a single set now count half. A set of 25 isn\'t two and a half times a set of 10 — past fifteen you\'re training endurance, and it shouldn\'t stack up forever.'],
+      ['better','Incline dumbbell press and leg curls specifically came down. Both were outscoring the heavier lift they sit next to in a session.'],
+      ['note', 'Nothing already logged has changed. Your points, streak, standings and pass are exactly where they were.'],
+      ['new',  'Forgot your password? There\'s a link on the sign-in screen now. It emails you a reset — no need to ask Liam.'],
+      ['new',  'You can also change your password any time under Me → ⚙️.'],
+      ['new',  'New kit: seated and standing side delt machines, leg press calf raise, shin (tibialis) raises, and the plate-loaded rack — chest press, incline, shoulder press, row, pulldown and leg press.']
+    ]
+  },
+  {
     version: '1.7.0',
     date: '2026-08-11',
     title: 'Big lifts, big points',

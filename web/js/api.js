@@ -175,6 +175,72 @@ export async function signIn(email, password) {
   persist(shapeSession(out));
 }
 
+/* -------------------------------------------------------------------------
+   Password reset
+
+   Supabase emails a link back to the app carrying a recovery token in the URL
+   fragment. consumeRecoveryLink() picks that up on boot and signs the person
+   in just far enough to set a new password.
+
+   The redirect target must be listed under Authentication → URL Configuration
+   → Redirect URLs in Supabase, or the link silently bounces.
+   ------------------------------------------------------------------------- */
+
+const appUrl = () => location.origin + location.pathname;
+
+export async function sendPasswordReset(email) {
+  if (demo.on()) return;
+  await request(`/auth/v1/recover?redirect_to=${encodeURIComponent(appUrl())}`, {
+    method: 'POST', auth: false, body: { email: email.trim() }
+  });
+}
+
+/**
+ * Called once on boot. If we arrived from a recovery email, adopt the session
+ * the link carries and report back so the app can ask for a new password.
+ */
+export async function consumeRecoveryLink() {
+  const hash = location.hash || '';
+  if (!hash.includes('access_token')) return false;
+
+  const p = new URLSearchParams(hash.slice(1));
+  const token = p.get('access_token');
+  const type = p.get('type');
+
+  // Clear it immediately — a recovery token sitting in the address bar is the
+  // sort of thing that ends up pasted into a group chat.
+  history.replaceState(null, '', appUrl());
+
+  if (!token || type !== 'recovery') return false;
+
+  persist({
+    access_token:  token,
+    refresh_token: p.get('refresh_token'),
+    expires_at:    Math.floor(Date.now() / 1000) + Number(p.get('expires_in') || 3600),
+    user:          null
+  });
+
+  // The link carries a token but no user, and everything downstream keys off
+  // currentUser().id — without this the app would decide they're brand new.
+  try {
+    const user = await request('/auth/v1/user');
+    persist({ ...session, user });
+    return true;
+  } catch {
+    persist(null);          // expired or already-used link
+    return false;
+  }
+}
+
+/** Set a new password for whoever is currently signed in. */
+export async function changePassword(newPassword) {
+  if (demo.on()) return;
+  const out = await request('/auth/v1/user', {
+    method: 'PUT', body: { password: newPassword }
+  });
+  if (session && out) persist({ ...session, user: out });
+}
+
 export async function signOut() {
   if (demo.on()) { demo.disable(); localStorage.removeItem('repclash.crew'); return; }
   try { await request('/auth/v1/logout', { method: 'POST' }); } catch { /* best effort */ }

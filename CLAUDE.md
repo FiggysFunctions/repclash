@@ -56,8 +56,23 @@ crew member reported machine curls outscoring bench, and barbell curls did too:
 | Small isolation | 0.12–0.25 | calves, delts, abductors |
 
 The underlying cause is structural: effort is linear in reps while the load
-multiplier only spans 1×–3×, so high-rep light work out-accumulates heavy work
-unless the rates are far apart. Keep new exercises inside these bands.
+multiplier is bounded, so high-rep light work out-accumulates heavy work unless
+the rates are far apart. Keep new exercises inside these bands.
+
+`11_scoring_curve.sql` then changed the curve itself after a second report
+(incline DB press beating bench): load is now `min(1 + kg/45, 4)` and reps past
+15 in a set count half. Heavy compounds kept their rates and gained ~20-25%;
+everything else was trimmed by band to hold the ordering.
+
+**An affine load factor can never make low-rep heavy beat high-rep light.**
+`(k+100)/(k+60) < 2` for any positive k, so it can't overcome a 2× rep
+difference. Fully reversing that needs a superlinear term in weight, which
+turns the leaderboard into a pure strength contest and breaks the
+level-the-field design. Don't do it without asking Liam.
+
+The formula lives in three places that must agree: `app.eff_reps()` +
+`app.fill_entry()` + `public.entry_effort()` in SQL, `effortOf()` in
+`web/js/progression.js`, and `effort()` in `web/js/demo.js`.
 
 Changing `points_per_unit` does **not** rescore history: `app.fill_entry()`
 computes and stores `effort_points` at insert time, so a retune only affects

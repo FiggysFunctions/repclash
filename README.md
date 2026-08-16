@@ -51,6 +51,22 @@ You need two free accounts. Neither ever asks for a card.
 8. Do the same with `supabase/07_progression.sql`.
 9. Do the same with `supabase/08_sets_and_sides.sql`.
 10. Do the same with `supabase/09_scoring_rates.sql`.
+11. Do the same with `supabase/10_more_exercises.sql`.
+12. Do the same with `supabase/11_scoring_curve.sql`.
+
+### Step 2b — Allow the password reset link back into the app
+
+**Authentication → URL Configuration**:
+
+- **Site URL**: `https://YOUR-USERNAME.github.io/repclash/`
+- **Redirect URLs**: add the same address
+
+Without this, the "forgot my password" email sends people to a dead end.
+
+Supabase's built-in email sender is rate limited to a handful an hour, which is
+fine for the odd reset. If it starts bouncing, add your own SMTP under
+**Project Settings → Auth → SMTP Settings** — Resend and Brevo both have free
+tiers big enough.
 
 Order matters — run them in number order.
 

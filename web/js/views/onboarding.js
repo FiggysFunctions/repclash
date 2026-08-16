@@ -5,7 +5,7 @@
 
 import * as api from '../api.js';
 import { saveConfig, activeCrew } from '../config.js';
-import { $, esc, toastOk, toastBad, randomAvatar, STARTER_AVATARS } from '../ui.js';
+import { $, esc, sheet, toastOk, toastBad, randomAvatar, STARTER_AVATARS } from '../ui.js';
 
 /* -------------------------------------------------------------------------
    1. Connect to Supabase (only shown if config.js hasn't been filled in)
@@ -109,6 +109,7 @@ export function renderAuth(root, next) {
           <button class="btn btn-primary" id="go">
             ${signup ? 'Create my account' : 'Sign in'}
           </button>
+          ${signup ? '' : '<button class="btn btn-ghost mt" id="forgot">Forgot my password</button>'}
         </div>
 
         <p class="hint center" style="padding:0 12px">
@@ -157,9 +158,116 @@ export function renderAuth(root, next) {
 
     $('#go', root).addEventListener('click', submit);
     $('#pw', root).addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
+    $('#forgot', root)?.addEventListener('click', () =>
+      forgotSheet($('#email', root).value.trim()));
   };
 
   draw();
+}
+
+/* -------------------------------------------------------------------------
+   Forgotten password
+   ------------------------------------------------------------------------- */
+function forgotSheet(prefill = '') {
+  const s = sheet(`
+    <h2>Reset your password</h2>
+    <p class="sub">We'll email you a link. Open it on this phone and you can
+      pick a new one.</p>
+    <div id="fp-err"></div>
+    <div class="field">
+      <label for="fp-email">Your email</label>
+      <input class="input" id="fp-email" type="email" inputmode="email"
+             autocapitalize="off" autocorrect="off" spellcheck="false"
+             value="${esc(prefill)}" placeholder="you@example.com">
+    </div>
+    <button class="btn btn-primary" data-send>Send the link</button>
+    <p class="hint center mt">
+      Check your spam folder — these land there more often than they should.
+    </p>
+  `);
+
+  $('[data-send]', s.el).addEventListener('click', async () => {
+    const btn = $('[data-send]', s.el);
+    const email = $('#fp-email', s.el).value.trim();
+    const err = $('#fp-err', s.el);
+    err.innerHTML = '';
+
+    if (!email.includes('@')) {
+      err.innerHTML = '<div class="err">Put your email address in.</div>';
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+    try {
+      await api.sendPasswordReset(email);
+      s.close();
+      // Deliberately not "we found your account" — that would tell anyone who
+      // asks whether a given email is registered.
+      toastOk('If that email has an account, the link is on its way');
+    } catch (e) {
+      err.innerHTML = `<div class="err">${esc(e.message)}</div>`;
+      btn.disabled = false;
+      btn.textContent = 'Send the link';
+    }
+  });
+}
+
+/* -------------------------------------------------------------------------
+   Landing from the reset email
+   ------------------------------------------------------------------------- */
+export function renderNewPassword(root, next) {
+  root.innerHTML = `
+    <div class="view">
+      <div class="center" style="padding:34px 0 20px">
+        <div style="font-size:3rem">🔑</div>
+        <h1 style="margin:10px 0 4px;font-size:1.6rem;font-weight:850">Pick a new password</h1>
+        <p class="muted" style="margin:0;font-size:.9rem">Then you're straight back in.</p>
+      </div>
+      <div class="card">
+        <div id="np-err"></div>
+        <div class="field">
+          <label for="np1">New password</label>
+          <input class="input" id="np1" type="password" autocomplete="new-password"
+                 placeholder="At least 6 characters">
+        </div>
+        <div class="field">
+          <label for="np2">Again, to be sure</label>
+          <input class="input" id="np2" type="password" autocomplete="new-password">
+        </div>
+        <button class="btn btn-primary" id="np-go">Save and sign in</button>
+      </div>
+    </div>`;
+
+  const save = async () => {
+    const btn = $('#np-go', root);
+    const err = $('#np-err', root);
+    const a = $('#np1', root).value;
+    const b = $('#np2', root).value;
+    err.innerHTML = '';
+
+    if (a.length < 6) {
+      err.innerHTML = '<div class="err">Six characters or more, please.</div>';
+      return;
+    }
+    if (a !== b) {
+      err.innerHTML = '<div class="err">Those two don\'t match.</div>';
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+    try {
+      await api.changePassword(a);
+      toastOk('Password changed');
+      next();
+    } catch (e) {
+      err.innerHTML = `<div class="err">${esc(e.message)}</div>`;
+      btn.disabled = false;
+      btn.textContent = 'Save and sign in';
+    }
+  };
+
+  $('#np-go', root).addEventListener('click', save);
+  $('#np2', root).addEventListener('keydown', e => { if (e.key === 'Enter') save(); });
 }
 
 /* -------------------------------------------------------------------------

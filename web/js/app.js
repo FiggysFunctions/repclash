@@ -12,7 +12,9 @@ import { $, esc, toastBad, applyTheme, restoreTheme } from './ui.js';
 
 import { hasUnread, markRead, primeIfFirstRun } from './changelog.js';
 import { openWhatsNew } from './views/whatsnew.js';
-import { renderSetup, renderAuth, renderProfileSetup, renderCrewSetup } from './views/onboarding.js';
+import {
+  renderSetup, renderAuth, renderProfileSetup, renderCrewSetup, renderNewPassword
+} from './views/onboarding.js';
 import * as leaderboardView from './views/leaderboard.js';
 import * as feedView from './views/feed.js';
 import * as logView from './views/log.js';
@@ -41,6 +43,14 @@ async function boot() {
   api.init();
 
   if (!api.isConfigured()) return stage(renderSetup);
+
+  // Arriving from a password reset email: adopt the session the link carries
+  // and go straight to choosing a new one. Checked before the signed-in test
+  // because the link is what signs them in.
+  if (await api.consumeRecoveryLink().catch(() => false)) {
+    return stage(renderNewPassword);
+  }
+
   if (!api.isSignedIn())   return stage(renderAuth);
 
   let profile;
